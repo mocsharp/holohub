@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,8 +70,8 @@ class App : public holoscan::Application {
     if (source_ == "aja") {
       width = from_config("aja.width").as<uint32_t>();
       height = from_config("aja.height").as<uint32_t>();
-      source = make_operator<ops::AJASourceOp>("aja",
-         from_config("aja"), from_config("external_source"));
+      source = make_operator<ops::AJASourceOp>(
+          "aja", from_config("aja"), from_config("external_source"));
       source_block_size = width * height * 4 * 4;
       source_num_blocks = use_rdma ? 3 : 4;
     } else if (source_ == "yuan") {
@@ -168,7 +168,9 @@ class App : public holoscan::Application {
 
     // Flow definition
     add_flow(lstm_inferer, tool_tracking_postprocessor, {{"tensor", "in"}});
-    add_flow(tool_tracking_postprocessor, visualizer, {{"out", "receivers"}});
+    add_flow(tool_tracking_postprocessor,
+             visualizer,
+             {{"out_coords", "receivers"}, {"out_mask", "receivers"}});
 
     std::string output_signal = "output";  // replayer output signal name
     if (source_ == "deltacast") {
