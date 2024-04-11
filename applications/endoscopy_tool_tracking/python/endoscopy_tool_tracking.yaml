@@ -16,19 +16,6 @@
 ---
 extensions:
 - gxf_extensions/lstm_tensor_rt_inference/libgxf_lstm_tensor_rt_inference.so
-- gxf_extensions/yuan_qcap/libgxf_qcap_source.so
-
-aja:
-  width: 1920
-  height: 1080
-  overlay_rdma: false
-  rdma: true
-  enable_overlay: false
-
-yuan:
-  width: 3840
-  height: 2160
-  rdma: true
 
 replayer:
   basename: "surgical_video"
@@ -36,14 +23,6 @@ replayer:
   repeat: true    # default: false
   realtime: true  # default: true
   count: 0        # default: 0 (no frame count restriction)
-
-recorder_format_converter:
-  in_dtype: "rgba8888"
-  out_dtype: "rgb888"
-
-recorder:
-  directory: "/tmp"
-  basename: "tensor"
 
 format_converter_replayer:
   out_tensor_name: source_video

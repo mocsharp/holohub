@@ -299,7 +299,7 @@ gxf_result_t TensorRtInference::registerInterface(gxf::Registrar* registrar) {
   result &= registrar->parameter(rx_, "rx", "RX", "List of receivers to take input tensors");
   result &= registrar->parameter(tx_, "tx", "TX", "Transmitter to publish output tensors");
 
-  result &= cuda_stream_handler_.registerInterface(registrar, true);
+  result &= cuda_stream_handler_.registerInterface(registrar, false);
 
   return gxf::ToResultCode(result);
 }

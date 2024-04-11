@@ -65,7 +65,7 @@ class PyLSTMTensorRTInferenceOp : public LSTMTensorRTInferenceOp {
       const std::string& engine_cache_dir,
       // int64_t dla_core,
       std::shared_ptr<holoscan::Allocator> pool,
-      std::shared_ptr<holoscan::CudaStreamPool> cuda_stream_pool,
+      std::shared_ptr<holoscan::CudaStreamPool> cuda_stream_pool = nullptr,
       // std::shared_ptr<holoscan::Resource> clock,
       const std::string& plugins_lib_namespace = "",
       const std::vector<std::string>& input_state_tensor_names = std::vector<std::string>{},
@@ -81,7 +81,6 @@ class PyLSTMTensorRTInferenceOp : public LSTMTensorRTInferenceOp {
                                         Arg{"engine_cache_dir", engine_cache_dir},
                                         // Arg{"dla_core", dla_core},
                                         Arg{"pool", pool},
-                                        Arg{"cuda_stream_pool", cuda_stream_pool},
                                         // Arg{"clock", clock},
                                         Arg{"plugins_lib_namespace", plugins_lib_namespace},
                                         Arg{"input_state_tensor_names", input_state_tensor_names},
@@ -92,6 +91,7 @@ class PyLSTMTensorRTInferenceOp : public LSTMTensorRTInferenceOp {
                                         Arg{"relaxed_dimension_check", relaxed_dimension_check},
                                         Arg{"max_workspace_size", max_workspace_size},
                                         Arg{"max_batch_size", max_batch_size}}) {
+    if (cuda_stream_pool) { this->add_arg(Arg{"cuda_stream_pool", cuda_stream_pool}); }
     name_ = name;
     fragment_ = fragment;
     spec_ = std::make_shared<OperatorSpec>(fragment);
@@ -152,7 +152,7 @@ PYBIND11_MODULE(_lstm_tensor_rt_inference, m) {
            "engine_cache_dir"_a,
            // "dla_core"_a,
            "pool"_a,
-           "cuda_stream_pool"_a,
+           "cuda_stream_pool"_a = py::none(),
            // "clock"_a,
            "plugins_lib_namespace"_a = "",
            "input_state_tensor_names"_a = std::vector<std::string>{},

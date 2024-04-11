@@ -83,7 +83,8 @@ void LSTMTensorRTInferenceOp::setup(OperatorSpec& spec) {
   spec.param(cuda_stream_pool_,
              "cuda_stream_pool",
              "Cuda Stream Pool",
-             "Instance of gxf::CudaStreamPool to allocate CUDA stream.");
+             "Instance of gxf::CudaStreamPool to allocate CUDA stream.",
+             ParameterFlag::kOptional);
 
   spec.param(max_workspace_size_,
              "max_workspace_size",
