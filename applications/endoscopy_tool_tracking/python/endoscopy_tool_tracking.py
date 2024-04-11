@@ -110,7 +110,7 @@ class CloudInferenceFragment(Fragment):
                 block_size=lstm_inferer_block_size,
                 num_blocks=lstm_inferer_num_blocks,
             ),
-            # cuda_stream_pool=cuda_stream_pool,
+            cuda_stream_pool=cuda_stream_pool,
             model_file_path=model_file_path,
             engine_cache_dir=engine_cache_dir,
             **self.kwargs("lstm_inference"),
