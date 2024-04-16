@@ -208,6 +208,9 @@ class EndoscopyApp(Application):
 
 
 if __name__ == "__main__":
+    # get the Application's arguments
+    app_argv = Application().argv
+
     # Parse args
     parser = ArgumentParser(description="Endoscopy tool tracking demo application.")
 
@@ -223,7 +226,7 @@ if __name__ == "__main__":
         default="none",
         help=("Set the data path"),
     )
-    args = parser.parse_args()
+    args = parser.parse_args(app_argv[1:])
 
     if args.config == "none":
         config_file = os.path.join(os.path.dirname(__file__), "endoscopy_tool_tracking.yaml")
