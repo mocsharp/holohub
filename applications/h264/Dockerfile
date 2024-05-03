@@ -48,7 +48,7 @@ ARG CMAKE_BUILD_TYPE=Release
 # - Install libv4l-dev required for nvv4l2
 # - Install kmod as a workaround to fix iGPU support.
 #   GXF ENC / DEC needs lsmod to check whether it's dGPU or iGPU.
-RUN apt update && apt install -y libv4l-dev kmod
+RUN apt update && apt install -y libv4l-dev kmod pkg-config
 
 # Below workarounds are required to get H.264 Encode and Decode working inside
 # the docker container.
@@ -63,3 +63,12 @@ COPY applications/h264/install_dependencies.sh /
 WORKDIR /
 
 RUN /install_dependencies.sh
+
+RUN mkdir -p /opt/gxf/mm/lib
+COPY applications/h264/ext/*.so /opt/gxf/mm/lib/
+RUN ls -l /opt/gxf/mm/lib
+
+ENV LD_LIBRARY_PATH="/opt/gxf/mm/lib:$LD_LIBRARY_PATH"
+
+COPY applications/h264/ext/nvv4l2_x86_ds-7.0.deb /tmp/nvv4l2_x86_ds-7.0.deb
+RUN dpkg -i /tmp/nvv4l2_x86_ds-7.0.deb

@@ -1,0 +1,44 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch h264 Endoscopy Tool Tracking Distributed",
+            "preLaunchTask": "Build h264 Endoscopy Tool Tracking Distributed",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/applications/h264/h264_endoscopy_tool_tracking_distributed/cpp/h264_endoscopy_tool_tracking_distributed",
+            "args": [
+                "--data", "${workspaceFolder}/data/endoscopy"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/applications/h264/h264_endoscopy_tool_tracking_distributed/cpp",
+            "environment": [
+                {
+                    "name": "HOLOSCAN_LOG_LEVEL",
+                    "value": "DEBUG"
+                },
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "${workspaceFolder}/applications/h264/ext/:${workspaceFolder}/build/gxf_extensions/lstm_tensor_rt_inference/:${env:LD_LIBRARY_PATH}"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

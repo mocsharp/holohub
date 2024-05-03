@@ -27,7 +27,7 @@ h264 support.
 
 ```bash
 ./dev_container build --docker_file ./applications/h264/Dockerfile \
-                      --base_img nvcr.io/nvidia/clara-holoscan/holoscan:v1.0.3-dgpu \
+                      --base_img nvcr.io/nvidia/clara-holoscan/holoscan:v2.0.0-dgpu \
                       --img holohub:h264
 ```
 

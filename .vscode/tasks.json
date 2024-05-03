@@ -1,0 +1,11 @@
+{
+    "tasks": [
+        {
+            "label": "Build h264 Endoscopy Tool Tracking Distributed",
+            "type": "shell",
+            "command": "bash",
+            "args": ["${workspaceFolder}/run", "build", "h264_endoscopy_tool_tracking_distributed", "--type", "debug"]
+        }
+    ],
+    "version": "2.0.0"
+}
