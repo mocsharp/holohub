@@ -35,22 +35,47 @@
 using namespace holoscan;
 class VideInputFragment : public holoscan::Fragment {
  private:
-  std::shared_ptr<holoscan::Operator> input_op_;
   std::string input_dir_;
 
  public:
   VideInputFragment(const std::string& input_dir) : input_dir_(input_dir) {}
 
-  void init() {
-    input_op_ = make_operator<ops::VideoReadBitstreamOp>(
+  void compose() override {
+    auto bitstream_reader = make_operator<ops::VideoReadBitstreamOp>(
         "bitstream_reader",
         from_config("bitstream_reader"),
         Arg("input_file_path", input_dir_ + "/surgical_video.264"),
         make_condition<CountCondition>(2000),
         Arg("pool") = make_resource<UnboundedAllocator>("pool"));
-  }
+    auto response_condition = make_condition<AsynchronousCondition>("response_condition");
+    auto video_decoder_context = make_resource<ops::VideoDecoderContext>(
+        "decoder-context", Arg("async_scheduling_term") = response_condition);
 
-  void compose() override { add_operator(input_op_); }
+    auto request_condition = make_condition<AsynchronousCondition>("request_condition");
+    auto video_decoder_request = make_operator<ops::VideoDecoderRequestOp>(
+        "video_decoder_request",
+        from_config("video_decoder_request"),
+        request_condition,
+        Arg("async_scheduling_term") = request_condition,
+        Arg("videodecoder_context") = video_decoder_context);
+
+    auto video_decoder_response = make_operator<ops::VideoDecoderResponseOp>(
+        "video_decoder_response",
+        from_config("video_decoder_response"),
+        response_condition,
+        Arg("pool") = make_resource<UnboundedAllocator>("pool"),
+        Arg("videodecoder_context") = video_decoder_context);
+
+    auto decoder_output_format_converter = make_operator<ops::FormatConverterOp>(
+        "decoder_output_format_converter",
+        from_config("decoder_output_format_converter"),
+        Arg("pool") = make_resource<UnboundedAllocator>("pool"));
+
+    add_flow(bitstream_reader, video_decoder_request, {{"output_transmitter", "input_frame"}});
+    add_flow(video_decoder_response,
+             decoder_output_format_converter,
+             {{"output_transmitter", "source_video"}});
+  }
 };
 
 class NoOpOp : public Operator {
@@ -177,14 +202,13 @@ class App : public holoscan::Application {
 
     auto video_in = make_fragment<VideInputFragment>("video_in", datapath_);
     auto video_in_fragment = std::dynamic_pointer_cast<VideInputFragment>(video_in);
-    video_in_fragment->init();
     auto cloud_inference =
         make_fragment<CloudInferenceFragment>("inference", datapath_, width, height);
     auto viz = make_fragment<VizFragment>("viz", width, height);
 
     add_flow(video_in, cloud_inference, {{"bitstream_reader.output_transmitter", "no_op.input"}});
     add_flow(
-        cloud_inference, viz, {{"decoder_output_format_converter.tensor", "holoviz.receivers"}});
+        video_in, viz, {{"decoder_output_format_converter.tensor", "holoviz.receivers"}});
     add_flow(cloud_inference,
              viz,
              {{"tool_tracking_postprocessor.out_coords", "holoviz.receivers"},
