@@ -4,6 +4,7 @@ data/
 ci/
 CTestConfig.cmake
 *__pycache__
+.venv/
 
 # GXF Extensions
 *.so

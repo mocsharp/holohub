@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package holohub.gxf.entity;
+
+service GxfEntityService {
+  rpc StreamEntity(Entity) returns (StreamEntitySummary);
+  rpc SayHello(HelloRequest) returns (HelloReply) {}
+}
+
+// A StreamEntitySummary is received in response to a StreamEntity rpc.
+message StreamEntitySummary {
+  // The number of frames received.
+  int32 frame_count = 1;
+
+  // The duration of the entire stream.
+  int32 elapsed_time = 2;
+}
+
+message Timestamp {
+  // The timestamp in nanoseconds at which the message was published into the system.
+  int64 pubtime = 1;
+  // The timestamp in nanoseconds at the message was acquired. This usually refers to the timestamp
+  // of the original sensor data which created the message.
+  int64 acqtime = 2;
+}
+
+message Tensor {
+  enum PrimitiveType {
+    kUnsigned8 = 0;
+    kUnsigned16 = 4;
+    kFloat32 = 9;
+  }
+  PrimitiveType primitive_type = 1;
+  repeated int32 dimensions = 2;
+  bytes data = 3;
+}
+
+message Entity {
+  Timestamp timestamp = 1;
+  map<string, Tensor> tensors = 2;
+}
+
+// The request message containing the user's name.
+message HelloRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message HelloReply {
+  string message = 1;
+}
