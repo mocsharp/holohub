@@ -22,31 +22,6 @@ find_package(holoscan 2.0 REQUIRED CONFIG
 
 include(../protos/common.cmake)
 
-# # Proto file
-# get_filename_component(hw_proto "../proto/helloworld.proto" ABSOLUTE)
-# get_filename_component(hw_proto_path "${hw_proto}" PATH)
-
-# # Generated sources
-# set(hw_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/helloworld.pb.cc")
-# set(hw_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/helloworld.pb.h")
-# set(hw_grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.cc")
-# set(hw_grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/helloworld.grpc.pb.h")
-# message(STATUS "before add_custom_command")
-# add_custom_command(
-#       OUTPUT "${hw_proto_srcs}" "${hw_proto_hdrs}" "${hw_grpc_srcs}" "${hw_grpc_hdrs}"
-#       COMMAND ${_PROTOBUF_PROTOC}
-#       ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
-#         --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
-#         -I "${hw_proto_path}"
-#         --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
-#         "${hw_proto}"
-#       DEPENDS "${hw_proto}")
-
-# # Include generated *.pb.h files
-# message(STATUS "after add_custom_command")
-# include_directories(${CMAKE_CURRENT_BINARY_DIR} ${PROTOBUF_INCLUDE_DIR})
-# message(STATUS "after include_directories")
-
 set(CORE_PROTO_FILES
     ${CMAKE_CURRENT_LIST_DIR}/../protos/helloworld.proto
 )
@@ -55,21 +30,20 @@ grpc_generate_cpp(CORE_GRPC_SRCS CORE_GRPC_HDRS INCLUDE_DIRS ${CORE_PROTO_FILES}
 add_library(grpc_entity_service_protos ${CORE_GRPC_HDRS} ${CORE_GRPC_SRCS})
 
 target_link_libraries(grpc_entity_service_protos
+  absl::flags
+  absl::flags_parse
   ${GRPC_GRPCPP}
   ${GRPCPP_REFLECTION}
   ${PROTOBUF_LIBPROTOBUF})
 
 add_executable(grpc_h264_endoscopy_tool_tracking main.cpp)
 target_include_directories(grpc_h264_endoscopy_tool_tracking PUBLIC ${INCLUDE_DIRS} ${PROTOBUF_INCLUDE_DIRS})
+
+
 target_link_libraries(grpc_h264_endoscopy_tool_tracking
   PUBLIC
     grpc_entity_service_protos
   PRIVATE
-    absl::flags
-    absl::flags_parse
-    ${GRPC_GRPCPP}
-    ${GRPCPP_REFLECTION}
-    ${PROTOBUF_LIBPROTOBUF}
     holoscan::core
     holoscan::ops::format_converter
     holoscan::ops::holoviz
@@ -80,19 +54,6 @@ target_link_libraries(grpc_h264_endoscopy_tool_tracking
     lstm_tensor_rt_inference
     tool_tracking_postprocessor)
 
-message(STATUS "===========>PROTOBUF_INCLUDE_DIRS=${PROTOBUF_INCLUDE_DIRS}")
-message(STATUS "===========>PROTOBUF_LIBPROTOBUF=${PROTOBUF_LIBPROTOBUF}")
-message(STATUS "===========>GRPCPP_REFLECTION=${GRPCPP_REFLECTION}")
-message(STATUS "===========>GRPC_GRPCPP=${GRPC_GRPCPP}")
-# get_cmake_property(_variableNames VARIABLES)
-# list (SORT _variableNames)
-# foreach (_variableName ${_variableNames})
-#     message(STATUS "===========>${_variableName}=${${_variableName}}")
-# endforeach()
-
-# target_link_libraries(grpc_h264_endoscopy_tool_tracking PRIVATE $<TARGET_NAME_IF_EXISTS:holoscan::videomaster>)
-# target_link_libraries(grpc_h264_endoscopy_tool_tracking PRIVATE $<TARGET_NAME_IF_EXISTS:holoscan::qcap_source>)
-# target_link_libraries(grpc_h264_endoscopy_tool_tracking PRIVATE $<TARGET_NAME_IF_EXISTS:holoscan::vtk_renderer>)
 
 # Download the associated dataset if needed
 option(HOLOHUB_DOWNLOAD_DATASETS "Download datasets" ON)

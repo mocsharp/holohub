@@ -92,10 +92,12 @@ set(PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
 set(GRPCPP_REFLECTION gRPC::grpc++_reflection)
 if(CMAKE_CROSSCOMPILING)
   find_program(PROTOC_EXECUTABLE protoc)
+  message(STATUS "A Using protoc ${PROTOC_EXECUTABLE}")
 else()
-  # set(PROTOC_EXECUTABLE $<TARGET_FILE:protobuf::protoc>)
-  get_target_property(PROTOC_EXECUTABLE protobuf::protoc LOCATION)
-endif()
+  set(PROTOC_EXECUTABLE $<TARGET_FILE:protobuf::protoc>)
+  # get_target_property(PROTOC_EXECUTABLE protobuf::protoc LOCATION)
+  message(STATUS "B Using protoc ${PROTOC_EXECUTABLE}")
+  endif()
 
 # Find gRPC installation
 # Looks for gRPCConfig.cmake file installed by gRPC's cmake installation.
@@ -109,10 +111,18 @@ else()
   set(GRPC_CPP_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 endif()
 
+message(STATUS "=========================================")
+get_cmake_property(_variableNames VARIABLES)
+list (SORT _variableNames)
+foreach (_variableName ${_variableNames})
+  message(STATUS "${_variableName}=${${_variableName}}")
+endforeach()
+message(STATUS "=========================================")
+
 # Expose variables with PARENT_SCOPE so that
 # root project can use it for including headers and using executables
-set(PROTOC_EXECUTABLE ${_PROTOBUF_PROTOC} PARENT_SCOPE)
-set(GRPC_CPP_EXECUTABLE ${_GRPC_CPP_PLUGIN_EXECUTABLE} PARENT_SCOPE)
+set(PROTOC_EXECUTABLE ${PROTOC_EXECUTABLE} PARENT_SCOPE)
+set(GRPC_CPP_EXECUTABLE ${GRPC_CPP_EXECUTABLE} PARENT_SCOPE)
 set(PROTOBUF_LIBPROTOBUF ${PROTOBUF_LIBPROTOBUF} PARENT_SCOPE)
 set(GRPCPP_REFLECTION ${GRPCPP_REFLECTION} PARENT_SCOPE)
 set(GRPC_GRPCPP ${GRPC_GRPCPP} PARENT_SCOPE)

@@ -55,14 +55,12 @@ class VideInputFragment : public holoscan::Fragment {
     auto video_decoder_request = make_operator<ops::VideoDecoderRequestOp>(
         "video_decoder_request",
         from_config("video_decoder_request"),
-        request_condition,
         Arg("async_scheduling_term") = request_condition,
         Arg("videodecoder_context") = video_decoder_context);
 
     auto video_decoder_response = make_operator<ops::VideoDecoderResponseOp>(
         "video_decoder_response",
         from_config("video_decoder_response"),
-        response_condition,
         Arg("pool") = make_resource<UnboundedAllocator>("pool"),
         Arg("videodecoder_context") = video_decoder_context);
 
