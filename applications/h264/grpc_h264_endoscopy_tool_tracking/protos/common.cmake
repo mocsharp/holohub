@@ -81,11 +81,19 @@ endfunction()
 # This branch assumes that gRPC and all its dependencies are already installed
 # on this system, so they can be located by find_package().
 
+message(STATUS "=========================================")
+get_cmake_property(_variableNames VARIABLES)
+list (SORT _variableNames)
+foreach (_variableName ${_variableNames})
+  message(STATUS "${_variableName}=${${_variableName}}")
+endforeach()
+message(STATUS "=========================================")
+
 # Find Protobuf installation
 # Looks for protobuf-config.cmake file installed by Protobuf's cmake installation.
 option(protobuf_MODULE_COMPATIBLE TRUE)
 include(FindProtobuf)
-find_package(Protobuf CONFIG REQUIRED)
+find_package(Protobuf CONFIG REQUIRED PATHS "${holoscan_ROOT}3rdparty/grpc/1.54.2/lib/cmake/protobuf/")
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
 
 set(PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
@@ -101,7 +109,8 @@ else()
 
 # Find gRPC installation
 # Looks for gRPCConfig.cmake file installed by gRPC's cmake installation.
-find_package(gRPC CONFIG REQUIRED)
+find_package(absl CONFIG REQUIRED PATHS "${holoscan_ROOT}3rdparty/grpc/1.54.2/lib/cmake/absl/")
+find_package(gRPC CONFIG REQUIRED PATHS "${holoscan_ROOT}3rdparty/grpc/1.54.2/lib/cmake/grpc/")
 message(STATUS "Using gRPC ${gRPC_VERSION}")
 
 set(GRPC_GRPCPP gRPC::grpc++)
@@ -110,14 +119,6 @@ if(CMAKE_CROSSCOMPILING)
 else()
   set(GRPC_CPP_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 endif()
-
-message(STATUS "=========================================")
-get_cmake_property(_variableNames VARIABLES)
-list (SORT _variableNames)
-foreach (_variableName ${_variableNames})
-  message(STATUS "${_variableName}=${${_variableName}}")
-endforeach()
-message(STATUS "=========================================")
 
 # Expose variables with PARENT_SCOPE so that
 # root project can use it for including headers and using executables

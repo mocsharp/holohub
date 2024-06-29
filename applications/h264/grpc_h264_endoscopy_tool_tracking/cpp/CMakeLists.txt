@@ -30,8 +30,6 @@ grpc_generate_cpp(CORE_GRPC_SRCS CORE_GRPC_HDRS INCLUDE_DIRS ${CORE_PROTO_FILES}
 add_library(grpc_entity_service_protos ${CORE_GRPC_HDRS} ${CORE_GRPC_SRCS})
 
 target_link_libraries(grpc_entity_service_protos
-  absl::flags
-  absl::flags_parse
   ${GRPC_GRPCPP}
   ${GRPCPP_REFLECTION}
   ${PROTOBUF_LIBPROTOBUF})
@@ -41,16 +39,17 @@ target_include_directories(grpc_h264_endoscopy_tool_tracking PUBLIC ${INCLUDE_DI
 
 
 target_link_libraries(grpc_h264_endoscopy_tool_tracking
-  PUBLIC
     grpc_entity_service_protos
-  PRIVATE
+    absl::flags
+    absl::flags_parse
+    ${GRPC_GRPCPP}
+    ${GRPCPP_REFLECTION}
+    ${PROTOBUF_LIBPROTOBUF}
     holoscan::core
+    holoscan::ops::gxf_codelet
     holoscan::ops::format_converter
     holoscan::ops::holoviz
-    holoscan::ops::video_decoder
     holoscan::ops::video_encoder
-    holoscan::ops::video_read_bitstream
-    holoscan::ops::video_write_bitstream
     lstm_tensor_rt_inference
     tool_tracking_postprocessor)
 
