@@ -1,0 +1,147 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights
+ * reserved. SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_APP_CLOUD_HPP
+#define GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_APP_CLOUD_HPP
+
+#include <grpcpp/grpcpp.h>
+// #include <grpcpp/ext/proto_server_reflection_plugin.h>
+// #include <grpcpp/health_check_service_interface.h>
+#include <holoscan/holoscan.hpp>
+#include <holoscan/operators/format_converter/format_converter.hpp>
+#include <lstm_tensor_rt_inference.hpp>
+#include <tool_tracking_postprocessor.hpp>
+
+#include "entity_server.hpp"
+#include "grpc_ops.hpp"
+#include "resource_queue.hpp"
+
+using grpc::Server;
+using grpc::ServerBuilder;
+
+namespace holohub::grpc_h264_endoscopy_tool_tracking {
+
+class AppCloud : public AppBase {
+ public:
+  void compose() override {
+    using namespace holoscan;
+
+    request_queue_ = make_resource<RequestQueue>("request_queue");
+    processing_queue_ = make_resource<ProcessingQueue>("processing_queue");
+    response_queue_ = make_resource<ResponseQueue>("response_queue");
+
+    auto grpc_request_op =
+        make_operator<GrpcRequestOp>("grpc_request_op",
+                                     Arg("request_queue") = request_queue_,
+                                     Arg("processing_queue") = processing_queue_,
+                                     Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
+
+    auto response_condition = make_condition<AsynchronousCondition>("response_condition");
+    auto video_decoder_context = make_resource<VideoDecoderContext>(
+        "decoder-context", Arg("async_scheduling_term") = response_condition);
+
+    auto request_condition = make_condition<AsynchronousCondition>("request_condition");
+    auto video_decoder_request =
+        make_operator<VideoDecoderRequestOp>("video_decoder_request",
+                                             from_config("video_decoder_request"),
+                                             request_condition,
+                                             Arg("async_scheduling_term") = request_condition,
+                                             Arg("videodecoder_context") = video_decoder_context);
+
+    auto video_decoder_response = make_operator<VideoDecoderResponseOp>(
+        "video_decoder_response",
+        from_config("video_decoder_response"),
+        response_condition,
+        Arg("pool") = make_resource<UnboundedAllocator>("pool"),
+        Arg("videodecoder_context") = video_decoder_context);
+
+    auto decoder_output_format_converter = make_operator<ops::FormatConverterOp>(
+        "decoder_output_format_converter",
+        from_config("decoder_output_format_converter"),
+        Arg("pool") = make_resource<UnboundedAllocator>("pool"));
+
+    auto rgb_float_format_converter = make_operator<ops::FormatConverterOp>(
+        "rgb_float_format_converter",
+        from_config("rgb_float_format_converter"),
+        Arg("pool") = make_resource<UnboundedAllocator>("pool"));
+
+    const std::string model_file_path = datapath_ + "/tool_loc_convlstm.onnx";
+    const std::string engine_cache_dir = datapath_ + "/engines";
+
+    auto lstm_inferer = make_operator<ops::LSTMTensorRTInferenceOp>(
+        "lstm_inferer",
+        from_config("lstm_inference"),
+        Arg("model_file_path", model_file_path),
+        Arg("engine_cache_dir", engine_cache_dir),
+        Arg("pool") = make_resource<UnboundedAllocator>("pool"),
+        Arg("cuda_stream_pool") = make_resource<CudaStreamPool>("cuda_stream", 0, 0, 0, 1, 5));
+
+    auto tool_tracking_postprocessor = make_operator<ops::ToolTrackingPostprocessorOp>(
+        "tool_tracking_postprocessor",
+        from_config("tool_tracking_postprocessor"),
+        Arg("device_allocator") = make_resource<UnboundedAllocator>("device_allocator"),
+        Arg("host_allocator") = make_resource<UnboundedAllocator>("host_allocator"));
+
+    auto grpc_results =
+        make_operator<GrpcResponseOp>("grpc_results", Arg("response_queue") = response_queue_);
+
+    add_flow(grpc_request_op, video_decoder_request, {{"out", "input_frame"}});
+    add_flow(video_decoder_response,
+             decoder_output_format_converter,
+             {{"output_transmitter", "source_video"}});
+    add_flow(
+        decoder_output_format_converter, rgb_float_format_converter, {{"tensor", "source_video"}});
+    add_flow(rgb_float_format_converter, lstm_inferer);
+    add_flow(lstm_inferer, tool_tracking_postprocessor, {{"tensor", "in"}});
+    add_flow(tool_tracking_postprocessor, grpc_results, {{"out_coords", "in"}, {"out_mask", "in"}});
+
+    HOLOSCAN_LOG_INFO("Starting gRPC server...");
+    server_thread_ = std::thread(&AppCloud::StartInternal, this);
+  }
+
+  ~AppCloud() {
+    HOLOSCAN_LOG_INFO("Stopping gRPC server...");
+    server_->Shutdown();
+    if (server_thread_.joinable()) { server_thread_.join(); }
+  }
+
+ private:
+  std::string server_address_ = "0.0.0.0:50051";
+  std::thread server_thread_;
+  std::unique_ptr<Server> server_;
+
+  std::shared_ptr<RequestQueue> request_queue_;
+  std::shared_ptr<ProcessingQueue> processing_queue_;
+  std::shared_ptr<ResponseQueue> response_queue_;
+
+  std::condition_variable server_callback_cv_;
+  std::mutex server_callback_mutex_;
+
+  void StartInternal() {
+    HoloscanEntityServiceImpl service(request_queue_, processing_queue_, response_queue_);
+    grpc::EnableDefaultHealthCheckService(true);
+    grpc::reflection::InitProtoReflectionServerBuilderPlugin();
+    ServerBuilder builder;
+    builder.AddListeningPort(server_address_, grpc::InsecureServerCredentials());
+    builder.RegisterService(&service);
+    std::unique_ptr<Server> server(builder.BuildAndStart());
+    HOLOSCAN_LOG_INFO("Server listening on {}", server_address_);
+    server->Wait();
+  }
+};
+}  // namespace holohub::grpc_h264_endoscopy_tool_tracking
+#endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_APP_CLOUD_HPP */
