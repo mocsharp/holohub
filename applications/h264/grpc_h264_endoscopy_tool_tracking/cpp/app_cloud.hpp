@@ -18,20 +18,13 @@
 #ifndef GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_APP_CLOUD_HPP
 #define GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_APP_CLOUD_HPP
 
-#include <grpcpp/grpcpp.h>
-// #include <grpcpp/ext/proto_server_reflection_plugin.h>
-// #include <grpcpp/health_check_service_interface.h>
 #include <holoscan/holoscan.hpp>
 #include <holoscan/operators/format_converter/format_converter.hpp>
 #include <lstm_tensor_rt_inference.hpp>
 #include <tool_tracking_postprocessor.hpp>
 
-#include "entity_server.hpp"
 #include "grpc_ops.hpp"
 #include "resource_queue.hpp"
-
-using grpc::Server;
-using grpc::ServerBuilder;
 
 namespace holohub::grpc_h264_endoscopy_tool_tracking {
 
@@ -40,16 +33,18 @@ class AppCloud : public AppBase {
   void compose() override {
     using namespace holoscan;
 
-    request_queue_ = make_resource<RequestQueue>("request_queue");
-    processing_queue_ = make_resource<ProcessingQueue>("processing_queue");
+    auto request_available_condition =
+        make_condition<AsynchronousCondition>("request_available_condition");
+    request_queue_ = make_resource<RequestQueue>("request_queue", request_available_condition);
     response_queue_ = make_resource<ResponseQueue>("response_queue");
 
     auto grpc_request_op =
         make_operator<GrpcRequestOp>("grpc_request_op",
+                                     Arg("server_address") = std::string("0.0.0.0:50051"),
                                      Arg("request_queue") = request_queue_,
-                                     Arg("processing_queue") = processing_queue_,
+                                     Arg("response_queue") = response_queue_,
+                                     Arg("condition") = request_available_condition,
                                      Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
-
     auto response_condition = make_condition<AsynchronousCondition>("response_condition");
     auto video_decoder_context = make_resource<VideoDecoderContext>(
         "decoder-context", Arg("async_scheduling_term") = response_condition);
@@ -108,40 +103,11 @@ class AppCloud : public AppBase {
     add_flow(rgb_float_format_converter, lstm_inferer);
     add_flow(lstm_inferer, tool_tracking_postprocessor, {{"tensor", "in"}});
     add_flow(tool_tracking_postprocessor, grpc_results, {{"out_coords", "in"}, {"out_mask", "in"}});
-
-    HOLOSCAN_LOG_INFO("Starting gRPC server...");
-    server_thread_ = std::thread(&AppCloud::StartInternal, this);
-  }
-
-  ~AppCloud() {
-    HOLOSCAN_LOG_INFO("Stopping gRPC server...");
-    server_->Shutdown();
-    if (server_thread_.joinable()) { server_thread_.join(); }
   }
 
  private:
-  std::string server_address_ = "0.0.0.0:50051";
-  std::thread server_thread_;
-  std::unique_ptr<Server> server_;
-
   std::shared_ptr<RequestQueue> request_queue_;
-  std::shared_ptr<ProcessingQueue> processing_queue_;
   std::shared_ptr<ResponseQueue> response_queue_;
-
-  std::condition_variable server_callback_cv_;
-  std::mutex server_callback_mutex_;
-
-  void StartInternal() {
-    HoloscanEntityServiceImpl service(request_queue_, processing_queue_, response_queue_);
-    grpc::EnableDefaultHealthCheckService(true);
-    grpc::reflection::InitProtoReflectionServerBuilderPlugin();
-    ServerBuilder builder;
-    builder.AddListeningPort(server_address_, grpc::InsecureServerCredentials());
-    builder.RegisterService(&service);
-    std::unique_ptr<Server> server(builder.BuildAndStart());
-    HOLOSCAN_LOG_INFO("Server listening on {}", server_address_);
-    server->Wait();
-  }
 };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking
 #endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_APP_CLOUD_HPP */

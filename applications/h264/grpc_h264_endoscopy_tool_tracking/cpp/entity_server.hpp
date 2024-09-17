@@ -44,23 +44,28 @@ namespace holohub::grpc_h264_endoscopy_tool_tracking {
 class HoloscanEntityServiceImpl final : public Entity::Service {
  public:
   HoloscanEntityServiceImpl(std::shared_ptr<RequestQueue> request_queue,
-                            std::shared_ptr<ProcessingQueue> processing_queue,
-                            std::shared_ptr<ResponseQueue> response_queue)
+                            std::shared_ptr<ResponseQueue> response_queue,
+                            std::shared_ptr<Allocator> allocator, void* gxf_context)
       : request_queue_(request_queue),
-        processing_queue_(processing_queue),
-        response_queue_(response_queue) {}
+        response_queue_(response_queue),
+        allocator_(allocator),
+        gxf_context_(gxf_context) {}
 
   Status Metadata(ServerContext* context, const EntityRequest* request,
                   EntityResponse* reply) override {
     auto service = request->service();
 
     if (service == "endoscopy_tool_tracking") {
-      ;
-      std::string request_id = generate_request_id();
-      request_queue_->push(request_id, request);
-      response_queue_->block_until_data_available();
-      auto response = response_queue_->pop();
-      holoscan::ops::TensorProto::tensor_to_entity_response(response, reply);
+      auto out_message = nvidia::gxf::Entity::New(gxf_context_);
+      auto gxf_allocator =
+          nvidia::gxf::Handle<nvidia::gxf::Allocator>::Create(gxf_context_, allocator_->gxf_cid());
+      holoscan::ops::TensorProto::entity_request_to_tensor(
+          request, out_message.value(), gxf_allocator.value());
+
+      request_queue_->push(out_message.value());
+      // response_queue_->block_until_data_available();
+      // auto response = response_queue_->pop();
+      // holoscan::ops::TensorProto::tensor_to_entity_response(response, reply);
       return Status::OK;
     }
 
@@ -68,21 +73,10 @@ class HoloscanEntityServiceImpl final : public Entity::Service {
   }
 
  private:
-  std::string generate_request_id(size_t length = 16) {
-    const std::string characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    std::random_device random_device;
-    std::mt19937 generator(random_device());
-    std::uniform_int_distribution<> distribution(0, characters.size() - 1);
-
-    std::string random_string;
-    for (size_t i = 0; i < length; ++i) { random_string += characters[distribution(generator)]; }
-
-    return random_string;
-  }
-
   std::shared_ptr<RequestQueue> request_queue_;
-  std::shared_ptr<ProcessingQueue> processing_queue_;
   std::shared_ptr<ResponseQueue> response_queue_;
+  std::shared_ptr<Allocator> allocator_;
+  void* gxf_context_;
 };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking
 

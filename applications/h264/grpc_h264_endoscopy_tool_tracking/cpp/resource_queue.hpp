@@ -36,46 +36,29 @@ class RequestQueue : public holoscan::Resource {
  public:
   HOLOSCAN_RESOURCE_FORWARD_ARGS_SUPER(RequestQueue, Resource)
 
-  RequestQueue() { queue_ = new queue<tuple<const string, const EntityRequest*>>(); }
+  explicit RequestQueue(shared_ptr<AsynchronousCondition> request_available_condition)
+      : request_available_condition_(request_available_condition) {
+    queue_ = new queue<nvidia::gxf::Entity>();
+  }
 
   ~RequestQueue() { delete queue_; }
 
-  void push(const string request_id, const EntityRequest* request) {
-    queue_->push(std::make_tuple(request_id, request));
-    lock_guard<mutex> lock(request_available_mutex_);
-    request_available_condition_.notify_all();
+  void push(nvidia::gxf::Entity entity) {
+    queue_->push(entity);
+    if (request_available_condition_->event_state() == AsynchronousEventState::EVENT_WAITING) {
+      request_available_condition_->event_state(AsynchronousEventState::EVENT_DONE);
+    }
   }
 
-  void block_until_data_available() {
-    unique_lock<mutex> lock(request_available_mutex_);
-    request_available_condition_.wait(lock, [this] { return this->queue_->size() > 0; });
-  }
-
-  tuple<const string, const EntityRequest*> pop() {
+  nvidia::gxf::Entity pop() {
     auto item = queue_->front();
     queue_->pop();
     return item;
   }
 
  private:
-  queue<tuple<const string, const EntityRequest*>>* queue_;
-  condition_variable request_available_condition_;
-  mutex request_available_mutex_;
-};
-
-class ProcessingQueue : public holoscan::Resource {
- public:
-  HOLOSCAN_RESOURCE_FORWARD_ARGS_SUPER(ProcessingQueue, Resource)
-
-  ProcessingQueue() : queue_() {}
-
-  void push(const string value) { queue_.push_back(value); }
-  bool contains(const string value) {
-    return find(queue_.begin(), queue_.end(), value) != queue_.end();
-  }
-
- private:
-  deque<string> queue_;
+  shared_ptr<AsynchronousCondition> request_available_condition_;
+  queue<nvidia::gxf::Entity>* queue_;
 };
 
 class ResponseQueue : public holoscan::Resource {

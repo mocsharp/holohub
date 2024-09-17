@@ -41,9 +41,8 @@ class EntityClient {
  public:
   explicit EntityClient(std::shared_ptr<Channel> channel) : stub_(Entity::NewStub(channel)) {}
 
-  const nvidia::gxf::Entity EndoscopyToolTracking(EntityRequest& request,
-                                                  ExecutionContext& execution_context,
-                                                  std::shared_ptr<Allocator> allocator) {
+  void EndoscopyToolTracking(EntityRequest& request, nvidia::gxf::Entity& gxf_entity,
+                             nvidia::gxf::Handle<nvidia::gxf::Allocator> gxf_allocator) {
     request.set_service("endoscopy_tool_tracking");
 
     EntityResponse reply;
@@ -53,9 +52,7 @@ class EntityClient {
 
     // Act upon its status.
     if (status.ok()) {
-      auto entity = holoscan::ops::TensorProto::entity_response_to_tensor(
-          reply, execution_context, allocator);
-      return entity;
+      holoscan::ops::TensorProto::entity_response_to_tensor(reply, gxf_entity, gxf_allocator);
     } else {
       throw std::runtime_error(
           fmt::format("RPC Failed with code: {}: {}", status.error_code(), status.error_message()));

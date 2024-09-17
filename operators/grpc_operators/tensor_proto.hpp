@@ -19,12 +19,25 @@ class TensorProto {
   static EntityRequest tensor_to_entity_request(const nvidia::gxf::Entity& gxf_entity);
   static void tensor_to_entity_response(const nvidia::gxf::Entity& gxf_entity,
                                         EntityResponse* response);
-  static nvidia::gxf::Entity entity_request_to_tensor(const EntityRequest* entity_request,
-                                                      ExecutionContext& context,
-                                                      std::shared_ptr<Allocator> allocator);
-  static nvidia::gxf::Entity entity_response_to_tensor(const EntityResponse& entity_request,
-                                                       ExecutionContext& context,
-                                                       std::shared_ptr<Allocator> allocator);
+  static void entity_request_to_tensor(const EntityRequest* entity_request,
+                                       nvidia::gxf::Entity& gxf_entity,
+                                       nvidia::gxf::Handle<nvidia::gxf::Allocator> gxf_allocator);
+  static void entity_response_to_tensor(const EntityResponse& entity_request,
+                                        nvidia::gxf::Entity& gxf_entity,
+                                        nvidia::gxf::Handle<nvidia::gxf::Allocator> gxf_allocator);
+
+ private:
+  static void gxf_time_to_proto(const nvidia::gxf::Entity& gxf_entity,
+                                ::holoscan::entity::Timestamp* timestamp);
+  static void gxf_tensor_to_proto(
+      const nvidia::gxf::Entity& gxf_entity,
+      google::protobuf::Map<std::string, ::holoscan::entity::Tensor>* tensor_map);
+  static void proto_to_gxf_time(nvidia::gxf::Entity& gxf_entity,
+                                const ::holoscan::entity::Timestamp& timestamp);
+  static void proto_to_gxf_tensor(
+      nvidia::gxf::Entity& gxf_entity,
+      const google::protobuf::Map<std::string, ::holoscan::entity::Tensor>& tensor_map,
+      nvidia::gxf::Handle<nvidia::gxf::Allocator>& allocator);
 };
 
 }  // namespace holoscan::ops
