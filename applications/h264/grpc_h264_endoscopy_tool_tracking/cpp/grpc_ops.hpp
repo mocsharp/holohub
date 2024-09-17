@@ -158,30 +158,30 @@ class GrpcRequestOp : public holoscan::Operator {
   std::unique_ptr<Server> server_;
 };
 
-class TestOp : public holoscan::Operator {
- public:
-  HOLOSCAN_OPERATOR_FORWARD_ARGS(TestOp)
+// class TestOp : public holoscan::Operator {
+//  public:
+//   HOLOSCAN_OPERATOR_FORWARD_ARGS(TestOp)
 
-  TestOp() = default;
+//   TestOp() = default;
 
-  void setup(OperatorSpec& spec) override {
-    spec.input<holoscan::gxf::Entity>("in");
-    spec.output<holoscan::gxf::Entity>("out");
-  }
+//   void setup(OperatorSpec& spec) override {
+//     spec.input<holoscan::gxf::Entity>("in");
+//     spec.output<holoscan::gxf::Entity>("out");
+//   }
 
-  void compute(InputContext& op_input, OutputContext& op_output,
-               ExecutionContext& context) override {
-    auto maybe_input_message = op_input.receive<holoscan::gxf::Entity>("in");
-    if (!maybe_input_message) {
-      HOLOSCAN_LOG_ERROR("Failed to receive input message");
-      return;
-    }
-    auto input_image = maybe_input_message.value().get<Tensor>();
-    if (!input_image) {
-      HOLOSCAN_LOG_ERROR("Failed to get image from message");
-      return;
-    }
-  }
-};
+//   void compute(InputContext& op_input, OutputContext& op_output,
+//                ExecutionContext& context) override {
+//     auto maybe_input_message = op_input.receive<holoscan::gxf::Entity>("in");
+//     if (!maybe_input_message) {
+//       HOLOSCAN_LOG_ERROR("Failed to receive input message");
+//       return;
+//     }
+//     auto input_image = maybe_input_message.value().get<Tensor>();
+//     if (!input_image) {
+//       HOLOSCAN_LOG_ERROR("Failed to get image from message");
+//       return;
+//     }
+//   }
+// };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking
 #endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_GRPC_OPS_HPP */
