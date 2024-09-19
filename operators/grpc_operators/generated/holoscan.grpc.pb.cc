@@ -23,8 +23,8 @@ namespace holoscan {
 namespace entity {
 
 static const char* Entity_method_names[] = {
-  "/holoscan.entity.Entity/Metadata",
-  "/holoscan.entity.Entity/MetadataStream",
+  "/holoscan.entity.Entity/Entity",
+  "/holoscan.entity.Entity/EntityStream",
 };
 
 std::unique_ptr< Entity::Stub> Entity::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -34,47 +34,47 @@ std::unique_ptr< Entity::Stub> Entity::NewStub(const std::shared_ptr< ::grpc::Ch
 }
 
 Entity::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options)
-  : channel_(channel), rpcmethod_Metadata_(Entity_method_names[0], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_MetadataStream_(Entity_method_names[1], options.suffix_for_stats(),::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
+  : channel_(channel), rpcmethod_Entity_(Entity_method_names[0], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_EntityStream_(Entity_method_names[1], options.suffix_for_stats(),::grpc::internal::RpcMethod::BIDI_STREAMING, channel)
   {}
 
-::grpc::Status Entity::Stub::Metadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::holoscan::entity::EntityResponse* response) {
-  return ::grpc::internal::BlockingUnaryCall< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_Metadata_, context, request, response);
+::grpc::Status Entity::Stub::Entity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::holoscan::entity::EntityResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_Entity_, context, request, response);
 }
 
-void Entity::Stub::async::Metadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, std::function<void(::grpc::Status)> f) {
-  ::grpc::internal::CallbackUnaryCall< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_Metadata_, context, request, response, std::move(f));
+void Entity::Stub::async::Entity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_Entity_, context, request, response, std::move(f));
 }
 
-void Entity::Stub::async::Metadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, ::grpc::ClientUnaryReactor* reactor) {
-  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_Metadata_, context, request, response, reactor);
+void Entity::Stub::async::Entity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_Entity_, context, request, response, reactor);
 }
 
-::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>* Entity::Stub::PrepareAsyncMetadataRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::holoscan::entity::EntityResponse, ::holoscan::entity::EntityRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_Metadata_, context, request);
+::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>* Entity::Stub::PrepareAsyncEntityRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::holoscan::entity::EntityResponse, ::holoscan::entity::EntityRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_Entity_, context, request);
 }
 
-::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>* Entity::Stub::AsyncMetadataRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
+::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>* Entity::Stub::AsyncEntityRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
   auto* result =
-    this->PrepareAsyncMetadataRaw(context, request, cq);
+    this->PrepareAsyncEntityRaw(context, request, cq);
   result->StartCall();
   return result;
 }
 
-::grpc::ClientReader< ::holoscan::entity::EntityResponse>* Entity::Stub::MetadataStreamRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request) {
-  return ::grpc::internal::ClientReaderFactory< ::holoscan::entity::EntityResponse>::Create(channel_.get(), rpcmethod_MetadataStream_, context, request);
+::grpc::ClientReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* Entity::Stub::EntityStreamRaw(::grpc::ClientContext* context) {
+  return ::grpc::internal::ClientReaderWriterFactory< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>::Create(channel_.get(), rpcmethod_EntityStream_, context);
 }
 
-void Entity::Stub::async::MetadataStream(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::grpc::ClientReadReactor< ::holoscan::entity::EntityResponse>* reactor) {
-  ::grpc::internal::ClientCallbackReaderFactory< ::holoscan::entity::EntityResponse>::Create(stub_->channel_.get(), stub_->rpcmethod_MetadataStream_, context, request, reactor);
+void Entity::Stub::async::EntityStream(::grpc::ClientContext* context, ::grpc::ClientBidiReactor< ::holoscan::entity::EntityRequest,::holoscan::entity::EntityResponse>* reactor) {
+  ::grpc::internal::ClientCallbackReaderWriterFactory< ::holoscan::entity::EntityRequest,::holoscan::entity::EntityResponse>::Create(stub_->channel_.get(), stub_->rpcmethod_EntityStream_, context, reactor);
 }
 
-::grpc::ClientAsyncReader< ::holoscan::entity::EntityResponse>* Entity::Stub::AsyncMetadataStreamRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq, void* tag) {
-  return ::grpc::internal::ClientAsyncReaderFactory< ::holoscan::entity::EntityResponse>::Create(channel_.get(), cq, rpcmethod_MetadataStream_, context, request, true, tag);
+::grpc::ClientAsyncReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* Entity::Stub::AsyncEntityStreamRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) {
+  return ::grpc::internal::ClientAsyncReaderWriterFactory< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>::Create(channel_.get(), cq, rpcmethod_EntityStream_, context, true, tag);
 }
 
-::grpc::ClientAsyncReader< ::holoscan::entity::EntityResponse>* Entity::Stub::PrepareAsyncMetadataStreamRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncReaderFactory< ::holoscan::entity::EntityResponse>::Create(channel_.get(), cq, rpcmethod_MetadataStream_, context, request, false, nullptr);
+::grpc::ClientAsyncReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* Entity::Stub::PrepareAsyncEntityStreamRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncReaderWriterFactory< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>::Create(channel_.get(), cq, rpcmethod_EntityStream_, context, false, nullptr);
 }
 
 Entity::Service::Service() {
@@ -86,34 +86,33 @@ Entity::Service::Service() {
              ::grpc::ServerContext* ctx,
              const ::holoscan::entity::EntityRequest* req,
              ::holoscan::entity::EntityResponse* resp) {
-               return service->Metadata(ctx, req, resp);
+               return service->Entity(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       Entity_method_names[1],
-      ::grpc::internal::RpcMethod::SERVER_STREAMING,
-      new ::grpc::internal::ServerStreamingHandler< Entity::Service, ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>(
+      ::grpc::internal::RpcMethod::BIDI_STREAMING,
+      new ::grpc::internal::BidiStreamingHandler< Entity::Service, ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>(
           [](Entity::Service* service,
              ::grpc::ServerContext* ctx,
-             const ::holoscan::entity::EntityRequest* req,
-             ::grpc::ServerWriter<::holoscan::entity::EntityResponse>* writer) {
-               return service->MetadataStream(ctx, req, writer);
+             ::grpc::ServerReaderWriter<::holoscan::entity::EntityResponse,
+             ::holoscan::entity::EntityRequest>* stream) {
+               return service->EntityStream(ctx, stream);
              }, this)));
 }
 
 Entity::Service::~Service() {
 }
 
-::grpc::Status Entity::Service::Metadata(::grpc::ServerContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response) {
+::grpc::Status Entity::Service::Entity(::grpc::ServerContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response) {
   (void) context;
   (void) request;
   (void) response;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-::grpc::Status Entity::Service::MetadataStream(::grpc::ServerContext* context, const ::holoscan::entity::EntityRequest* request, ::grpc::ServerWriter< ::holoscan::entity::EntityResponse>* writer) {
+::grpc::Status Entity::Service::EntityStream(::grpc::ServerContext* context, ::grpc::ServerReaderWriter< ::holoscan::entity::EntityResponse, ::holoscan::entity::EntityRequest>* stream) {
   (void) context;
-  (void) request;
-  (void) writer;
+  (void) stream;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 

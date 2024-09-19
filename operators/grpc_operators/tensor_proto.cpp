@@ -96,16 +96,14 @@ void TensorProto::proto_to_gxf_tensor(
   }
 }
 
-EntityRequest TensorProto::tensor_to_entity_request(const nvidia::gxf::Entity& gxf_entity) {
-  EntityRequest request;
-  TensorProto::gxf_time_to_proto(gxf_entity, request.mutable_timestamp());
-  TensorProto::gxf_tensor_to_proto(gxf_entity, request.mutable_tensors());
-
-  return request;
+void TensorProto::tensor_to_entity_request(const nvidia::gxf::Entity& gxf_entity,
+                                           std::shared_ptr<EntityRequest> request) {
+  TensorProto::gxf_time_to_proto(gxf_entity, request->mutable_timestamp());
+  TensorProto::gxf_tensor_to_proto(gxf_entity, request->mutable_tensors());
 }
 
 void TensorProto::tensor_to_entity_response(const nvidia::gxf::Entity& gxf_entity,
-                                            EntityResponse* response) {
+                                            std::shared_ptr<EntityResponse> response) {
   TensorProto::gxf_time_to_proto(gxf_entity, response->mutable_timestamp());
   TensorProto::gxf_tensor_to_proto(gxf_entity, response->mutable_tensors());
 }

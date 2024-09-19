@@ -79,6 +79,14 @@ function(grpc_generate_cpp SRCS HDRS INCLUDE_DIRS)
 endfunction()
 
 include(FetchContent)
+set(ABSL_ENABLE_INSTALL ON)
+# FetchContent_Declare(
+#   absl
+#   GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+#   GIT_TAG        origin/master
+#   OVERRIDE_FIND_PACKAGE
+# )
+# FetchContent_MakeAvailable(absl)
 FetchContent_Declare(
   grpc
   GIT_REPOSITORY https://github.com/grpc/grpc.git
@@ -86,7 +94,7 @@ FetchContent_Declare(
   # v1.25.0, v1.26.0 etc..
   # For the purpose of testing, we override the tag used to the commit
   # that's currently under test.
-  GIT_TAG        v1.54.2)
+  GIT_TAG        v1.54.3)
 set(FETCHCONTENT_QUIET OFF)
 FetchContent_MakeAvailable(grpc)
 

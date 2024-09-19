@@ -38,6 +38,10 @@ class VideoInputFragment : public holoscan::Fragment {
   explicit VideoInputFragment(const std::string& input_dir) : input_dir_(input_dir) {}
 
   void compose() override {
+    condition_ = make_condition<AsynchronousCondition>("response_available_condition");
+    request_queue_ = make_resource<ConditionVariableQueue<std::shared_ptr<EntityRequest>>>("request_queue");
+    response_queue_ = make_resource<AsynchronousConditionQueue>("response_queue", condition_);
+
     auto bitstream_reader = make_operator<VideoReadBitstreamOp>(
         "bitstream_reader",
         from_config("bitstream_reader"),
@@ -47,10 +51,17 @@ class VideoInputFragment : public holoscan::Fragment {
                                           Arg("recess_period") = std::string("25hz")),
         Arg("pool") = make_resource<UnboundedAllocator>("pool"));
 
-    auto grpc_client = make_operator<GrpcClientOperator>(
-        "grpc_client",
-        Arg("server_address") = std::string("localhost:50051"),
+    auto outgoing_requets = make_operator<GrpcClientRequestOp>(
+        "outgoing_requets",
+        Arg("request_queue") = request_queue_,
+        Arg("response_queue") = response_queue_,
         Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
+
+    auto incoming_responses = make_operator<GrpcClientResponseOp>(
+        "incoming_responses",
+        Arg("response_queue") = response_queue_,
+        Arg("allocator") = make_resource<UnboundedAllocator>("pool"),
+        Arg("condition") = condition_);
 
     auto response_condition = make_condition<AsynchronousCondition>("response_condition");
     auto video_decoder_context = make_resource<VideoDecoderContext>(
@@ -76,12 +87,19 @@ class VideoInputFragment : public holoscan::Fragment {
         from_config("decoder_output_format_converter"),
         Arg("pool") = make_resource<UnboundedAllocator>("pool"));
 
-    add_flow(bitstream_reader, grpc_client, {{"output_transmitter", "input"}});
+    add_flow(bitstream_reader, outgoing_requets, {{"output_transmitter", "input"}});
     add_flow(bitstream_reader, video_decoder_request, {{"output_transmitter", "input_frame"}});
     add_flow(video_decoder_response,
              decoder_output_format_converter,
              {{"output_transmitter", "source_video"}});
+
+    add_operator(incoming_responses);
   }
+
+ private:
+  std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityRequest>>> request_queue_;
+  std::shared_ptr<AsynchronousConditionQueue> response_queue_;
+  std::shared_ptr<AsynchronousCondition> condition_;
 };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking
 #endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_VIDEO_INPUT_FRAGMENT_HPP */

@@ -21,87 +21,125 @@ using grpc::ServerBuilder;
 
 namespace holohub::grpc_h264_endoscopy_tool_tracking {
 
-class GrpcClientOperator : public holoscan::Operator {
+class GrpcClientResponseOp : public holoscan::Operator {
  public:
-  HOLOSCAN_OPERATOR_FORWARD_ARGS(GrpcClientOperator);
+  HOLOSCAN_OPERATOR_FORWARD_ARGS(GrpcClientResponseOp)
 
-  GrpcClientOperator() = default;
+  GrpcClientResponseOp() = default;
 
-  void start() override {
-    HOLOSCAN_LOG_INFO("Starting gRPC client...");
-    grpc_client_ = std::make_shared<EntityClient>(EntityClient(
-        grpc::CreateChannel(server_address_.get(), grpc::InsecureChannelCredentials())));
+  void start() override { condition_->event_state(AsynchronousEventState::EVENT_WAITING); }
+
+  void stop() override { condition_->event_state(AsynchronousEventState::EVENT_NEVER); }
+
+  void initialize() override {
+    if (condition_.has_value()) { add_arg(condition_.get()); }
+    Operator::initialize();
   }
 
   void setup(OperatorSpec& spec) override {
-    spec.param<std::string>(
-        server_address_, "server_address", "gRPC server address", "gRPC server address");
+    spec.param(response_queue_, "response_queue", "Response Queue", "Outgoing gRPC responses.");
     spec.param(allocator_, "allocator", "Allocator", "Output Allocator");
+    spec.param(condition_, "condition", "Asynchronous Condition", "Asynchronous Condition");
 
-    spec.input<nvidia::gxf::Entity>("input");
-    spec.output<nvidia::gxf::Entity>("output");
+    spec.output<holoscan::gxf::Entity>("output");
   }
 
   void compute(InputContext& op_input, OutputContext& op_output,
                ExecutionContext& context) override {
-    auto maybe_entity = op_input.receive<holoscan::gxf::Entity>("input");
-    if (!maybe_entity) { throw std::runtime_error("Failed to receive input"); }
-
-    // Create output message
-    auto out_message = nvidia::gxf::Entity::New(context.context());
-
-    // Get allocator
-    auto gxf_allocator = nvidia::gxf::Handle<nvidia::gxf::Allocator>::Create(context.context(),
-                                                                             allocator_->gxf_cid());
-    auto entity = maybe_entity.value();
-    auto request = holoscan::ops::TensorProto::tensor_to_entity_request(entity);
-    grpc_client_->EndoscopyToolTracking(request, out_message.value(), gxf_allocator.value());
-
-    auto result = nvidia::gxf::Entity(std::move(out_message.value()));
+    auto response = response_queue_->pop();
+    auto result = nvidia::gxf::Entity(std::move(response));
     op_output.emit(result, "output");
+    condition_->event_state(AsynchronousEventState::EVENT_WAITING);
   }
 
  private:
-  Parameter<std::string> server_address_;
+  Parameter<std::shared_ptr<AsynchronousCondition>> condition_;
+  Parameter<std::shared_ptr<AsynchronousConditionQueue>> response_queue_;
   Parameter<std::shared_ptr<Allocator>> allocator_;
-  std::shared_ptr<EntityClient> grpc_client_;
 };
 
-class GrpcResponseOp : public holoscan::Operator {
+class GrpcClientRequestOp : public holoscan::Operator {
  public:
-  HOLOSCAN_OPERATOR_FORWARD_ARGS(GrpcResponseOp)
-  GrpcResponseOp() = default;
+  HOLOSCAN_OPERATOR_FORWARD_ARGS(GrpcClientRequestOp)
+  GrpcClientRequestOp() = default;
+
+  void start() override {
+    entity_client_ = make_shared<EntityClient>(
+        EntityClient(grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials()),
+                     request_queue_,
+                     response_queue_));
+  }
 
   void setup(OperatorSpec& spec) override {
-    spec.input<nvidia::gxf::Entity>("in");
+    spec.input<nvidia::gxf::Entity>("input");
+
+    spec.param(request_queue_, "request_queue", "Request Queue", "Outgoing gRPC requests.");
+    spec.param(response_queue_, "response_queue", "Response Queue", "Incoming gRPC responses.");
+    spec.param(allocator_, "allocator", "Allocator", "Output Allocator");
+  }
+
+  void compute(InputContext& op_input, OutputContext& op_output,
+               ExecutionContext& context) override {
+    auto maybe_input_message = op_input.receive<holoscan::gxf::Entity>("input");
+    if (!maybe_input_message) {
+      HOLOSCAN_LOG_ERROR("Failed to receive input message");
+      return;
+    }
+    auto request = std::make_shared<EntityRequest>();
+    holoscan::ops::TensorProto::tensor_to_entity_request(maybe_input_message.value(), request);
+    request_queue_->push(request);
+    if (!stream_channel_started_) {
+      entity_client_->EndoscopyToolTracking(allocator_, fragment()->executor().context());
+      stream_channel_started_ = true;
+    }
+  }
+
+ private:
+  Parameter<std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityRequest>>>> request_queue_;
+  Parameter<std::shared_ptr<AsynchronousConditionQueue>> response_queue_;
+  Parameter<std::shared_ptr<Allocator>> allocator_;
+  std::shared_ptr<EntityClient> entity_client_;
+  bool stream_channel_started_ = false;
+};
+
+class GrpcServerResponseOp : public holoscan::Operator {
+ public:
+  HOLOSCAN_OPERATOR_FORWARD_ARGS(GrpcServerResponseOp)
+  GrpcServerResponseOp() = default;
+
+  void setup(OperatorSpec& spec) override {
+    spec.input<nvidia::gxf::Entity>("input");
 
     spec.param(response_queue_, "response_queue", "Response Queue", "Outgoing gRPC results.");
   }
 
   void compute(InputContext& op_input, OutputContext& op_output,
                ExecutionContext& context) override {
-    auto maybe_input_message = op_input.receive<holoscan::gxf::Entity>("in");
+    auto maybe_input_message = op_input.receive<holoscan::gxf::Entity>("input");
     if (!maybe_input_message) {
       HOLOSCAN_LOG_ERROR("Failed to receive input message");
       return;
     }
-    response_queue_->push(maybe_input_message.value());
+    auto response = std::make_shared<EntityResponse>();
+    holoscan::ops::TensorProto::tensor_to_entity_response(maybe_input_message.value(), response);
+    response_queue_->push(response);
   }
 
  private:
-  Parameter<std::shared_ptr<ResponseQueue>> response_queue_;
+  Parameter<std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>>>
+      response_queue_;
   ;
 };
 
-class GrpcRequestOp : public holoscan::Operator {
+class GrpcServerRequestOp : public holoscan::Operator {
  public:
-  HOLOSCAN_OPERATOR_FORWARD_ARGS(GrpcRequestOp)
+  HOLOSCAN_OPERATOR_FORWARD_ARGS(GrpcServerRequestOp)
 
-  GrpcRequestOp() = default;
+  GrpcServerRequestOp() = default;
 
   void start() override {
     HOLOSCAN_LOG_INFO("Starting gRPC server...");
-    server_thread_ = std::thread(&GrpcRequestOp::StartInternal, this);
+    server_thread_ = std::thread(&GrpcServerRequestOp::StartInternal, this);
     condition_->event_state(AsynchronousEventState::EVENT_WAITING);
   }
 
@@ -124,14 +162,14 @@ class GrpcRequestOp : public holoscan::Operator {
     spec.param(allocator_, "allocator", "Allocator", "Output Allocator");
     spec.param(condition_, "condition", "Asynchronous Condition", "Asynchronous Condition");
 
-    spec.output<holoscan::gxf::Entity>("out");
+    spec.output<holoscan::gxf::Entity>("output");
   }
 
   void compute(InputContext& op_input, OutputContext& op_output,
                ExecutionContext& context) override {
     auto request = request_queue_->pop();
     auto result = nvidia::gxf::Entity(std::move(request));
-    op_output.emit(result, "out");
+    op_output.emit(result, "output");
     condition_->event_state(AsynchronousEventState::EVENT_WAITING);
   }
 
@@ -150,8 +188,9 @@ class GrpcRequestOp : public holoscan::Operator {
   }
 
   Parameter<std::shared_ptr<AsynchronousCondition>> condition_;
-  Parameter<std::shared_ptr<RequestQueue>> request_queue_;
-  Parameter<std::shared_ptr<ResponseQueue>> response_queue_;
+  Parameter<std::shared_ptr<AsynchronousConditionQueue>> request_queue_;
+  Parameter<std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>>>
+      response_queue_;
   Parameter<std::shared_ptr<Allocator>> allocator_;
   Parameter<std::string> server_address_;
   std::thread server_thread_;

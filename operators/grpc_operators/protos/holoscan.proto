@@ -17,8 +17,8 @@ syntax = "proto3";
 package holoscan.entity;
 
 service Entity {
-  rpc Metadata (EntityRequest) returns (EntityResponse) {}
-  rpc MetadataStream (EntityRequest) returns (stream EntityResponse) {}
+  rpc Entity (EntityRequest) returns (EntityResponse) {}
+  rpc EntityStream (stream EntityRequest) returns (stream EntityResponse) {}
 
 }
 

@@ -26,25 +26,30 @@
 #include "grpc_ops.hpp"
 #include "resource_queue.hpp"
 
+using holoscan::entity::EntityResponse;
+
 namespace holohub::grpc_h264_endoscopy_tool_tracking {
 
 class AppCloud : public AppBase {
  public:
   void compose() override {
+    HOLOSCAN_LOG_INFO("===============AppCloud===============");
     using namespace holoscan;
 
     auto request_available_condition =
         make_condition<AsynchronousCondition>("request_available_condition");
-    request_queue_ = make_resource<RequestQueue>("request_queue", request_available_condition);
-    response_queue_ = make_resource<ResponseQueue>("response_queue");
+    request_queue_ =
+        make_resource<AsynchronousConditionQueue>("request_queue", request_available_condition);
+    response_queue_ =
+        make_resource<ConditionVariableQueue<std::shared_ptr<EntityResponse>>>("response_queue");
 
-    auto grpc_request_op =
-        make_operator<GrpcRequestOp>("grpc_request_op",
-                                     Arg("server_address") = std::string("0.0.0.0:50051"),
-                                     Arg("request_queue") = request_queue_,
-                                     Arg("response_queue") = response_queue_,
-                                     Arg("condition") = request_available_condition,
-                                     Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
+    auto grpc_request_op = make_operator<GrpcServerRequestOp>(
+        "grpc_request_op",
+        Arg("server_address") = std::string("0.0.0.0:50051"),
+        Arg("request_queue") = request_queue_,
+        Arg("response_queue") = response_queue_,
+        Arg("condition") = request_available_condition,
+        Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
     auto response_condition = make_condition<AsynchronousCondition>("response_condition");
     auto video_decoder_context = make_resource<VideoDecoderContext>(
         "decoder-context", Arg("async_scheduling_term") = response_condition);
@@ -91,10 +96,10 @@ class AppCloud : public AppBase {
         Arg("device_allocator") = make_resource<UnboundedAllocator>("device_allocator"),
         Arg("host_allocator") = make_resource<UnboundedAllocator>("host_allocator"));
 
-    auto grpc_results =
-        make_operator<GrpcResponseOp>("grpc_results", Arg("response_queue") = response_queue_);
+    auto grpc_results = make_operator<GrpcServerResponseOp>(
+        "grpc_results", Arg("response_queue") = response_queue_);
 
-    add_flow(grpc_request_op, video_decoder_request, {{"out", "input_frame"}});
+    add_flow(grpc_request_op, video_decoder_request, {{"output", "input_frame"}});
     add_flow(video_decoder_response,
              decoder_output_format_converter,
              {{"output_transmitter", "source_video"}});
@@ -102,12 +107,14 @@ class AppCloud : public AppBase {
         decoder_output_format_converter, rgb_float_format_converter, {{"tensor", "source_video"}});
     add_flow(rgb_float_format_converter, lstm_inferer);
     add_flow(lstm_inferer, tool_tracking_postprocessor, {{"tensor", "in"}});
-    add_flow(tool_tracking_postprocessor, grpc_results, {{"out_coords", "in"}, {"out_mask", "in"}});
+    add_flow(tool_tracking_postprocessor,
+             grpc_results,
+             {{"out_coords", "input"}, {"out_mask", "input"}});
   }
 
  private:
-  std::shared_ptr<RequestQueue> request_queue_;
-  std::shared_ptr<ResponseQueue> response_queue_;
+  std::shared_ptr<AsynchronousConditionQueue> request_queue_;
+  std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>> response_queue_;
 };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking
 #endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_APP_CLOUD_HPP */

@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef VIZ_FRAGMENT_HPP
-#define VIZ_FRAGMENT_HPP
+#ifndef GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_VIZ_FRAGMENT_HPP
+#define GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_VIZ_FRAGMENT_HPP
 
 #include <holoscan/holoscan.hpp>
 #include <holoscan/operators/holoviz/holoviz.hpp>
@@ -35,14 +35,13 @@ class VizFragment : public holoscan::Fragment {
   void compose() override {
     std::shared_ptr<UnboundedAllocator> visualizer_allocator;
 
-    auto visualizer_operator =
-        make_operator<ops::HolovizOp>("holoviz",
-                                      from_config("holoviz"),
-                                      Arg("width") = width_,
-                                      Arg("height") = height_,
-                                      Arg("allocator") = visualizer_allocator);
-    add_operator(visualizer_operator);
+    auto visualizer_op = make_operator<ops::HolovizOp>("visualizer_op",
+                                                       from_config("holoviz"),
+                                                       Arg("width") = width_,
+                                                       Arg("height") = height_,
+                                                       Arg("allocator") = visualizer_allocator);
+    add_operator(visualizer_op);
   }
 };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking
-#endif
+#endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_VIZ_FRAGMENT_HPP */

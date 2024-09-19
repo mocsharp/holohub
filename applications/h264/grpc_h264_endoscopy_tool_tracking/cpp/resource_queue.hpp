@@ -32,21 +32,21 @@ using holoscan::entity::EntityResponse;
 
 namespace holohub::grpc_h264_endoscopy_tool_tracking {
 
-class RequestQueue : public holoscan::Resource {
+class AsynchronousConditionQueue : public holoscan::Resource {
  public:
-  HOLOSCAN_RESOURCE_FORWARD_ARGS_SUPER(RequestQueue, Resource)
+  HOLOSCAN_RESOURCE_FORWARD_ARGS_SUPER(AsynchronousConditionQueue, Resource)
 
-  explicit RequestQueue(shared_ptr<AsynchronousCondition> request_available_condition)
-      : request_available_condition_(request_available_condition) {
+  explicit AsynchronousConditionQueue(shared_ptr<AsynchronousCondition> request_available_condition)
+      : data_available_condition_(request_available_condition) {
     queue_ = new queue<nvidia::gxf::Entity>();
   }
 
-  ~RequestQueue() { delete queue_; }
+  ~AsynchronousConditionQueue() { delete queue_; }
 
   void push(nvidia::gxf::Entity entity) {
     queue_->push(entity);
-    if (request_available_condition_->event_state() == AsynchronousEventState::EVENT_WAITING) {
-      request_available_condition_->event_state(AsynchronousEventState::EVENT_DONE);
+    if (data_available_condition_->event_state() == AsynchronousEventState::EVENT_WAITING) {
+      data_available_condition_->event_state(AsynchronousEventState::EVENT_DONE);
     }
   }
 
@@ -57,35 +57,35 @@ class RequestQueue : public holoscan::Resource {
   }
 
  private:
-  shared_ptr<AsynchronousCondition> request_available_condition_;
+  shared_ptr<AsynchronousCondition> data_available_condition_;
   queue<nvidia::gxf::Entity>* queue_;
 };
 
-class ResponseQueue : public holoscan::Resource {
+template <typename DataT>
+class ConditionVariableQueue : public holoscan::Resource {
  public:
-  HOLOSCAN_RESOURCE_FORWARD_ARGS_SUPER(ResponseQueue, Resource)
+  HOLOSCAN_RESOURCE_FORWARD_ARGS_SUPER(ConditionVariableQueue, Resource)
 
-  ResponseQueue() : queue_() {}
+  ConditionVariableQueue() : queue_() {}
 
-  void push(const nvidia::gxf::Entity value) {
+  void push(DataT value) {
     queue_.push(value);
     lock_guard<mutex> lock(response_available_mutex_);
     response_available_condition_.notify_all();
   }
 
-  const nvidia::gxf::Entity pop() {
+  DataT pop() {
+    std::unique_lock<std::mutex> lock(response_available_mutex_);
+    response_available_condition_.wait(lock, [this]() { return !queue_.empty(); });
     auto item = queue_.front();
     queue_.pop();
     return item;
   }
 
-  void block_until_data_available() {
-    unique_lock<mutex> lock(response_available_mutex_);
-    response_available_condition_.wait(lock, [this] { return this->queue_.size() > 0; });
-  }
+  bool empty() { return queue_.empty(); }
 
  private:
-  queue<nvidia::gxf::Entity> queue_;
+  queue<DataT> queue_;
   condition_variable response_available_condition_;
   mutex response_available_mutex_;
 };

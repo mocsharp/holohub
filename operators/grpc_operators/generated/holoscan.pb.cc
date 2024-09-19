@@ -256,16 +256,16 @@ const char descriptor_table_protodef_holoscan_2eproto[] PROTOBUF_SECTION_VARIABL
   "ve_type\030\001 \001(\0162%.holoscan.entity.Tensor.P"
   "rimitiveType\022\022\n\ndimensions\030\002 \003(\005\022\014\n\004data"
   "\030\003 \001(\014\">\n\rPrimitiveType\022\016\n\nkUnsigned8\020\000\022"
-  "\017\n\013kUnsigned16\020\004\022\014\n\010kFloat32\020\t2\256\001\n\006Entit"
-  "y\022M\n\010Metadata\022\036.holoscan.entity.EntityRe"
-  "quest\032\037.holoscan.entity.EntityResponse\"\000"
-  "\022U\n\016MetadataStream\022\036.holoscan.entity.Ent"
-  "ityRequest\032\037.holoscan.entity.EntityRespo"
-  "nse\"\0000\001b\006proto3"
+  "\017\n\013kUnsigned16\020\004\022\014\n\010kFloat32\020\t2\254\001\n\006Entit"
+  "y\022K\n\006Entity\022\036.holoscan.entity.EntityRequ"
+  "est\032\037.holoscan.entity.EntityResponse\"\000\022U"
+  "\n\014EntityStream\022\036.holoscan.entity.EntityR"
+  "equest\032\037.holoscan.entity.EntityResponse\""
+  "\000(\0010\001b\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_holoscan_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_holoscan_2eproto = {
-    false, false, 1095, descriptor_table_protodef_holoscan_2eproto,
+    false, false, 1093, descriptor_table_protodef_holoscan_2eproto,
     "holoscan.proto",
     &descriptor_table_holoscan_2eproto_once, nullptr, 0, 8,
     schemas, file_default_instances, TableStruct_holoscan_2eproto::offsets,

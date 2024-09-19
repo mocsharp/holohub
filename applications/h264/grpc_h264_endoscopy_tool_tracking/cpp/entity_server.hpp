@@ -31,9 +31,9 @@
 #include "holoscan.pb.h"
 #include "resource_queue.hpp"
 
+using grpc::CallbackServerContext;
 using grpc::Server;
 using grpc::ServerBuilder;
-using grpc::ServerContext;
 using grpc::Status;
 using holoscan::entity::Entity;
 using holoscan::entity::EntityRequest;
@@ -41,40 +41,74 @@ using holoscan::entity::EntityResponse;
 
 namespace holohub::grpc_h264_endoscopy_tool_tracking {
 
-class HoloscanEntityServiceImpl final : public Entity::Service {
+class HoloscanEntityServiceImpl final : public Entity::CallbackService {
  public:
-  HoloscanEntityServiceImpl(std::shared_ptr<RequestQueue> request_queue,
-                            std::shared_ptr<ResponseQueue> response_queue,
+  HoloscanEntityServiceImpl(std::shared_ptr<AsynchronousConditionQueue> request_queue,
+                            std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>> response_queue,
                             std::shared_ptr<Allocator> allocator, void* gxf_context)
       : request_queue_(request_queue),
         response_queue_(response_queue),
         allocator_(allocator),
         gxf_context_(gxf_context) {}
 
-  Status Metadata(ServerContext* context, const EntityRequest* request,
-                  EntityResponse* reply) override {
-    auto service = request->service();
+  grpc::ServerBidiReactor<EntityRequest, EntityResponse>* EntityStream(
+      CallbackServerContext* context) override {
+    class EntityStreamInternal : public grpc::ServerBidiReactor<EntityRequest, EntityResponse> {
+     public:
+      EntityStreamInternal(std::shared_ptr<AsynchronousConditionQueue> request_queue,
+                           std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>> response_queue,
+                           std::shared_ptr<Allocator> allocator, void* gxf_context)
+          : request_queue_(request_queue),
+            response_queue_(response_queue),
+            allocator_(allocator),
+            gxf_context_(gxf_context) {
+        StartRead(&entity_request_);
+      }
+      void OnDone() override { delete this; }
+      void OnReadDone(bool ok) override {
+        if (ok) {
+          auto service = entity_request_.service();
 
-    if (service == "endoscopy_tool_tracking") {
-      auto out_message = nvidia::gxf::Entity::New(gxf_context_);
-      auto gxf_allocator =
-          nvidia::gxf::Handle<nvidia::gxf::Allocator>::Create(gxf_context_, allocator_->gxf_cid());
-      holoscan::ops::TensorProto::entity_request_to_tensor(
-          request, out_message.value(), gxf_allocator.value());
+          // if (service == "endoscopy_tool_tracking") {
+          auto out_message = nvidia::gxf::Entity::New(gxf_context_);
+          auto gxf_allocator = nvidia::gxf::Handle<nvidia::gxf::Allocator>::Create(
+              gxf_context_, allocator_->gxf_cid());
+          holoscan::ops::TensorProto::entity_request_to_tensor(
+              &entity_request_, out_message.value(), gxf_allocator.value());
 
-      request_queue_->push(out_message.value());
-      // response_queue_->block_until_data_available();
-      // auto response = response_queue_->pop();
-      // holoscan::ops::TensorProto::tensor_to_entity_response(response, reply);
-      return Status::OK;
-    }
+          request_queue_->push(out_message.value());
+          // } else {
+          //   Finish(grpc::Status(grpc::StatusCode::NOT_FOUND,
+          //                       fmt::format("Service {} not found", service)));
+          // }
+          NextWrite();
+        } else {
+          Finish(Status::OK);
+        }
+      }
+      void OnWriteDone(bool /*ok*/) override { NextWrite(); }
 
-    return grpc::Status(grpc::StatusCode::NOT_FOUND, fmt::format("Service {} not found", service));
+     private:
+      void NextWrite() {
+        if (!response_queue_->empty()) {
+          auto response = response_queue_->pop();
+          StartWrite(&*response);
+        } else {
+          StartRead(&entity_request_);
+        }
+      }
+      EntityRequest entity_request_;
+      std::shared_ptr<AsynchronousConditionQueue> request_queue_;
+      std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>> response_queue_;
+      std::shared_ptr<Allocator> allocator_;
+      void* gxf_context_;
+    };
+    return new EntityStreamInternal(request_queue_, response_queue_, allocator_, gxf_context_);
   }
 
  private:
-  std::shared_ptr<RequestQueue> request_queue_;
-  std::shared_ptr<ResponseQueue> response_queue_;
+  std::shared_ptr<AsynchronousConditionQueue> request_queue_;
+  std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>> response_queue_;
   std::shared_ptr<Allocator> allocator_;
   void* gxf_context_;
 };

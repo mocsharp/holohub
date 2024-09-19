@@ -51,64 +51,64 @@ class Entity final {
   class StubInterface {
    public:
     virtual ~StubInterface() {}
-    virtual ::grpc::Status Metadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::holoscan::entity::EntityResponse* response) = 0;
-    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>> AsyncMetadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>>(AsyncMetadataRaw(context, request, cq));
+    virtual ::grpc::Status Entity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::holoscan::entity::EntityResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>> AsyncEntity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>>(AsyncEntityRaw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>> PrepareAsyncMetadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>>(PrepareAsyncMetadataRaw(context, request, cq));
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>> PrepareAsyncEntity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>>(PrepareAsyncEntityRaw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientReaderInterface< ::holoscan::entity::EntityResponse>> MetadataStream(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request) {
-      return std::unique_ptr< ::grpc::ClientReaderInterface< ::holoscan::entity::EntityResponse>>(MetadataStreamRaw(context, request));
+    std::unique_ptr< ::grpc::ClientReaderWriterInterface< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>> EntityStream(::grpc::ClientContext* context) {
+      return std::unique_ptr< ::grpc::ClientReaderWriterInterface< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>>(EntityStreamRaw(context));
     }
-    std::unique_ptr< ::grpc::ClientAsyncReaderInterface< ::holoscan::entity::EntityResponse>> AsyncMetadataStream(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq, void* tag) {
-      return std::unique_ptr< ::grpc::ClientAsyncReaderInterface< ::holoscan::entity::EntityResponse>>(AsyncMetadataStreamRaw(context, request, cq, tag));
+    std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>> AsyncEntityStream(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) {
+      return std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>>(AsyncEntityStreamRaw(context, cq, tag));
     }
-    std::unique_ptr< ::grpc::ClientAsyncReaderInterface< ::holoscan::entity::EntityResponse>> PrepareAsyncMetadataStream(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncReaderInterface< ::holoscan::entity::EntityResponse>>(PrepareAsyncMetadataStreamRaw(context, request, cq));
+    std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>> PrepareAsyncEntityStream(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncReaderWriterInterface< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>>(PrepareAsyncEntityStreamRaw(context, cq));
     }
     class async_interface {
      public:
       virtual ~async_interface() {}
-      virtual void Metadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, std::function<void(::grpc::Status)>) = 0;
-      virtual void Metadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
-      virtual void MetadataStream(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::grpc::ClientReadReactor< ::holoscan::entity::EntityResponse>* reactor) = 0;
+      virtual void Entity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void Entity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void EntityStream(::grpc::ClientContext* context, ::grpc::ClientBidiReactor< ::holoscan::entity::EntityRequest,::holoscan::entity::EntityResponse>* reactor) = 0;
     };
     typedef class async_interface experimental_async_interface;
     virtual class async_interface* async() { return nullptr; }
     class async_interface* experimental_async() { return async(); }
    private:
-    virtual ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>* AsyncMetadataRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) = 0;
-    virtual ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>* PrepareAsyncMetadataRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) = 0;
-    virtual ::grpc::ClientReaderInterface< ::holoscan::entity::EntityResponse>* MetadataStreamRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request) = 0;
-    virtual ::grpc::ClientAsyncReaderInterface< ::holoscan::entity::EntityResponse>* AsyncMetadataStreamRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq, void* tag) = 0;
-    virtual ::grpc::ClientAsyncReaderInterface< ::holoscan::entity::EntityResponse>* PrepareAsyncMetadataStreamRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>* AsyncEntityRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::holoscan::entity::EntityResponse>* PrepareAsyncEntityRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientReaderWriterInterface< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* EntityStreamRaw(::grpc::ClientContext* context) = 0;
+    virtual ::grpc::ClientAsyncReaderWriterInterface< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* AsyncEntityStreamRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) = 0;
+    virtual ::grpc::ClientAsyncReaderWriterInterface< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* PrepareAsyncEntityStreamRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
     Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
-    ::grpc::Status Metadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::holoscan::entity::EntityResponse* response) override;
-    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>> AsyncMetadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>>(AsyncMetadataRaw(context, request, cq));
+    ::grpc::Status Entity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::holoscan::entity::EntityResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>> AsyncEntity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>>(AsyncEntityRaw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>> PrepareAsyncMetadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>>(PrepareAsyncMetadataRaw(context, request, cq));
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>> PrepareAsyncEntity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>>(PrepareAsyncEntityRaw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientReader< ::holoscan::entity::EntityResponse>> MetadataStream(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request) {
-      return std::unique_ptr< ::grpc::ClientReader< ::holoscan::entity::EntityResponse>>(MetadataStreamRaw(context, request));
+    std::unique_ptr< ::grpc::ClientReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>> EntityStream(::grpc::ClientContext* context) {
+      return std::unique_ptr< ::grpc::ClientReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>>(EntityStreamRaw(context));
     }
-    std::unique_ptr< ::grpc::ClientAsyncReader< ::holoscan::entity::EntityResponse>> AsyncMetadataStream(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq, void* tag) {
-      return std::unique_ptr< ::grpc::ClientAsyncReader< ::holoscan::entity::EntityResponse>>(AsyncMetadataStreamRaw(context, request, cq, tag));
+    std::unique_ptr<  ::grpc::ClientAsyncReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>> AsyncEntityStream(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) {
+      return std::unique_ptr< ::grpc::ClientAsyncReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>>(AsyncEntityStreamRaw(context, cq, tag));
     }
-    std::unique_ptr< ::grpc::ClientAsyncReader< ::holoscan::entity::EntityResponse>> PrepareAsyncMetadataStream(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncReader< ::holoscan::entity::EntityResponse>>(PrepareAsyncMetadataStreamRaw(context, request, cq));
+    std::unique_ptr<  ::grpc::ClientAsyncReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>> PrepareAsyncEntityStream(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>>(PrepareAsyncEntityStreamRaw(context, cq));
     }
     class async final :
       public StubInterface::async_interface {
      public:
-      void Metadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, std::function<void(::grpc::Status)>) override;
-      void Metadata(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
-      void MetadataStream(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::grpc::ClientReadReactor< ::holoscan::entity::EntityResponse>* reactor) override;
+      void Entity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, std::function<void(::grpc::Status)>) override;
+      void Entity(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void EntityStream(::grpc::ClientContext* context, ::grpc::ClientBidiReactor< ::holoscan::entity::EntityRequest,::holoscan::entity::EntityResponse>* reactor) override;
      private:
       friend class Stub;
       explicit async(Stub* stub): stub_(stub) { }
@@ -120,13 +120,13 @@ class Entity final {
    private:
     std::shared_ptr< ::grpc::ChannelInterface> channel_;
     class async async_stub_{this};
-    ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>* AsyncMetadataRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) override;
-    ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>* PrepareAsyncMetadataRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) override;
-    ::grpc::ClientReader< ::holoscan::entity::EntityResponse>* MetadataStreamRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request) override;
-    ::grpc::ClientAsyncReader< ::holoscan::entity::EntityResponse>* AsyncMetadataStreamRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq, void* tag) override;
-    ::grpc::ClientAsyncReader< ::holoscan::entity::EntityResponse>* PrepareAsyncMetadataStreamRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) override;
-    const ::grpc::internal::RpcMethod rpcmethod_Metadata_;
-    const ::grpc::internal::RpcMethod rpcmethod_MetadataStream_;
+    ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>* AsyncEntityRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::holoscan::entity::EntityResponse>* PrepareAsyncEntityRaw(::grpc::ClientContext* context, const ::holoscan::entity::EntityRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* EntityStreamRaw(::grpc::ClientContext* context) override;
+    ::grpc::ClientAsyncReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* AsyncEntityStreamRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq, void* tag) override;
+    ::grpc::ClientAsyncReaderWriter< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* PrepareAsyncEntityStreamRaw(::grpc::ClientContext* context, ::grpc::CompletionQueue* cq) override;
+    const ::grpc::internal::RpcMethod rpcmethod_Entity_;
+    const ::grpc::internal::RpcMethod rpcmethod_EntityStream_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -134,276 +134,251 @@ class Entity final {
    public:
     Service();
     virtual ~Service();
-    virtual ::grpc::Status Metadata(::grpc::ServerContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response);
-    virtual ::grpc::Status MetadataStream(::grpc::ServerContext* context, const ::holoscan::entity::EntityRequest* request, ::grpc::ServerWriter< ::holoscan::entity::EntityResponse>* writer);
+    virtual ::grpc::Status Entity(::grpc::ServerContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response);
+    virtual ::grpc::Status EntityStream(::grpc::ServerContext* context, ::grpc::ServerReaderWriter< ::holoscan::entity::EntityResponse, ::holoscan::entity::EntityRequest>* stream);
   };
   template <class BaseClass>
-  class WithAsyncMethod_Metadata : public BaseClass {
+  class WithAsyncMethod_Entity : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithAsyncMethod_Metadata() {
+    WithAsyncMethod_Entity() {
       ::grpc::Service::MarkMethodAsync(0);
     }
-    ~WithAsyncMethod_Metadata() override {
+    ~WithAsyncMethod_Entity() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Metadata(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
+    ::grpc::Status Entity(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestMetadata(::grpc::ServerContext* context, ::holoscan::entity::EntityRequest* request, ::grpc::ServerAsyncResponseWriter< ::holoscan::entity::EntityResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+    void RequestEntity(::grpc::ServerContext* context, ::holoscan::entity::EntityRequest* request, ::grpc::ServerAsyncResponseWriter< ::holoscan::entity::EntityResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
-  class WithAsyncMethod_MetadataStream : public BaseClass {
+  class WithAsyncMethod_EntityStream : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithAsyncMethod_MetadataStream() {
+    WithAsyncMethod_EntityStream() {
       ::grpc::Service::MarkMethodAsync(1);
     }
-    ~WithAsyncMethod_MetadataStream() override {
+    ~WithAsyncMethod_EntityStream() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status MetadataStream(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::grpc::ServerWriter< ::holoscan::entity::EntityResponse>* /*writer*/) override {
+    ::grpc::Status EntityStream(::grpc::ServerContext* /*context*/, ::grpc::ServerReaderWriter< ::holoscan::entity::EntityResponse, ::holoscan::entity::EntityRequest>* /*stream*/)  override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestMetadataStream(::grpc::ServerContext* context, ::holoscan::entity::EntityRequest* request, ::grpc::ServerAsyncWriter< ::holoscan::entity::EntityResponse>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(1, context, request, writer, new_call_cq, notification_cq, tag);
+    void RequestEntityStream(::grpc::ServerContext* context, ::grpc::ServerAsyncReaderWriter< ::holoscan::entity::EntityResponse, ::holoscan::entity::EntityRequest>* stream, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncBidiStreaming(1, context, stream, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_Metadata<WithAsyncMethod_MetadataStream<Service > > AsyncService;
+  typedef WithAsyncMethod_Entity<WithAsyncMethod_EntityStream<Service > > AsyncService;
   template <class BaseClass>
-  class WithCallbackMethod_Metadata : public BaseClass {
+  class WithCallbackMethod_Entity : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithCallbackMethod_Metadata() {
+    WithCallbackMethod_Entity() {
       ::grpc::Service::MarkMethodCallback(0,
           new ::grpc::internal::CallbackUnaryHandler< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>(
             [this](
-                   ::grpc::CallbackServerContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response) { return this->Metadata(context, request, response); }));}
-    void SetMessageAllocatorFor_Metadata(
+                   ::grpc::CallbackServerContext* context, const ::holoscan::entity::EntityRequest* request, ::holoscan::entity::EntityResponse* response) { return this->Entity(context, request, response); }));}
+    void SetMessageAllocatorFor_Entity(
         ::grpc::MessageAllocator< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* allocator) {
       ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(0);
       static_cast<::grpc::internal::CallbackUnaryHandler< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
-    ~WithCallbackMethod_Metadata() override {
+    ~WithCallbackMethod_Entity() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Metadata(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
+    ::grpc::Status Entity(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual ::grpc::ServerUnaryReactor* Metadata(
+    virtual ::grpc::ServerUnaryReactor* Entity(
       ::grpc::CallbackServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
-  class WithCallbackMethod_MetadataStream : public BaseClass {
+  class WithCallbackMethod_EntityStream : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithCallbackMethod_MetadataStream() {
+    WithCallbackMethod_EntityStream() {
       ::grpc::Service::MarkMethodCallback(1,
-          new ::grpc::internal::CallbackServerStreamingHandler< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>(
+          new ::grpc::internal::CallbackBidiHandler< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>(
             [this](
-                   ::grpc::CallbackServerContext* context, const ::holoscan::entity::EntityRequest* request) { return this->MetadataStream(context, request); }));
+                   ::grpc::CallbackServerContext* context) { return this->EntityStream(context); }));
     }
-    ~WithCallbackMethod_MetadataStream() override {
+    ~WithCallbackMethod_EntityStream() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status MetadataStream(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::grpc::ServerWriter< ::holoscan::entity::EntityResponse>* /*writer*/) override {
+    ::grpc::Status EntityStream(::grpc::ServerContext* /*context*/, ::grpc::ServerReaderWriter< ::holoscan::entity::EntityResponse, ::holoscan::entity::EntityRequest>* /*stream*/)  override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual ::grpc::ServerWriteReactor< ::holoscan::entity::EntityResponse>* MetadataStream(
-      ::grpc::CallbackServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/)  { return nullptr; }
+    virtual ::grpc::ServerBidiReactor< ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* EntityStream(
+      ::grpc::CallbackServerContext* /*context*/)
+      { return nullptr; }
   };
-  typedef WithCallbackMethod_Metadata<WithCallbackMethod_MetadataStream<Service > > CallbackService;
+  typedef WithCallbackMethod_Entity<WithCallbackMethod_EntityStream<Service > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
-  class WithGenericMethod_Metadata : public BaseClass {
+  class WithGenericMethod_Entity : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithGenericMethod_Metadata() {
+    WithGenericMethod_Entity() {
       ::grpc::Service::MarkMethodGeneric(0);
     }
-    ~WithGenericMethod_Metadata() override {
+    ~WithGenericMethod_Entity() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Metadata(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
+    ::grpc::Status Entity(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
   };
   template <class BaseClass>
-  class WithGenericMethod_MetadataStream : public BaseClass {
+  class WithGenericMethod_EntityStream : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithGenericMethod_MetadataStream() {
+    WithGenericMethod_EntityStream() {
       ::grpc::Service::MarkMethodGeneric(1);
     }
-    ~WithGenericMethod_MetadataStream() override {
+    ~WithGenericMethod_EntityStream() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status MetadataStream(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::grpc::ServerWriter< ::holoscan::entity::EntityResponse>* /*writer*/) override {
+    ::grpc::Status EntityStream(::grpc::ServerContext* /*context*/, ::grpc::ServerReaderWriter< ::holoscan::entity::EntityResponse, ::holoscan::entity::EntityRequest>* /*stream*/)  override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
   };
   template <class BaseClass>
-  class WithRawMethod_Metadata : public BaseClass {
+  class WithRawMethod_Entity : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithRawMethod_Metadata() {
+    WithRawMethod_Entity() {
       ::grpc::Service::MarkMethodRaw(0);
     }
-    ~WithRawMethod_Metadata() override {
+    ~WithRawMethod_Entity() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Metadata(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
+    ::grpc::Status Entity(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestMetadata(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+    void RequestEntity(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
-  class WithRawMethod_MetadataStream : public BaseClass {
+  class WithRawMethod_EntityStream : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithRawMethod_MetadataStream() {
+    WithRawMethod_EntityStream() {
       ::grpc::Service::MarkMethodRaw(1);
     }
-    ~WithRawMethod_MetadataStream() override {
+    ~WithRawMethod_EntityStream() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status MetadataStream(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::grpc::ServerWriter< ::holoscan::entity::EntityResponse>* /*writer*/) override {
+    ::grpc::Status EntityStream(::grpc::ServerContext* /*context*/, ::grpc::ServerReaderWriter< ::holoscan::entity::EntityResponse, ::holoscan::entity::EntityRequest>* /*stream*/)  override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestMetadataStream(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncWriter< ::grpc::ByteBuffer>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(1, context, request, writer, new_call_cq, notification_cq, tag);
+    void RequestEntityStream(::grpc::ServerContext* context, ::grpc::ServerAsyncReaderWriter< ::grpc::ByteBuffer, ::grpc::ByteBuffer>* stream, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncBidiStreaming(1, context, stream, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
-  class WithRawCallbackMethod_Metadata : public BaseClass {
+  class WithRawCallbackMethod_Entity : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithRawCallbackMethod_Metadata() {
+    WithRawCallbackMethod_Entity() {
       ::grpc::Service::MarkMethodRawCallback(0,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
-                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->Metadata(context, request, response); }));
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->Entity(context, request, response); }));
     }
-    ~WithRawCallbackMethod_Metadata() override {
+    ~WithRawCallbackMethod_Entity() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status Metadata(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
+    ::grpc::Status Entity(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual ::grpc::ServerUnaryReactor* Metadata(
+    virtual ::grpc::ServerUnaryReactor* Entity(
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
-  class WithRawCallbackMethod_MetadataStream : public BaseClass {
+  class WithRawCallbackMethod_EntityStream : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithRawCallbackMethod_MetadataStream() {
+    WithRawCallbackMethod_EntityStream() {
       ::grpc::Service::MarkMethodRawCallback(1,
-          new ::grpc::internal::CallbackServerStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+          new ::grpc::internal::CallbackBidiHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
-                   ::grpc::CallbackServerContext* context, const::grpc::ByteBuffer* request) { return this->MetadataStream(context, request); }));
+                   ::grpc::CallbackServerContext* context) { return this->EntityStream(context); }));
     }
-    ~WithRawCallbackMethod_MetadataStream() override {
+    ~WithRawCallbackMethod_EntityStream() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status MetadataStream(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::grpc::ServerWriter< ::holoscan::entity::EntityResponse>* /*writer*/) override {
+    ::grpc::Status EntityStream(::grpc::ServerContext* /*context*/, ::grpc::ServerReaderWriter< ::holoscan::entity::EntityResponse, ::holoscan::entity::EntityRequest>* /*stream*/)  override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual ::grpc::ServerWriteReactor< ::grpc::ByteBuffer>* MetadataStream(
-      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/)  { return nullptr; }
+    virtual ::grpc::ServerBidiReactor< ::grpc::ByteBuffer, ::grpc::ByteBuffer>* EntityStream(
+      ::grpc::CallbackServerContext* /*context*/)
+      { return nullptr; }
   };
   template <class BaseClass>
-  class WithStreamedUnaryMethod_Metadata : public BaseClass {
+  class WithStreamedUnaryMethod_Entity : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithStreamedUnaryMethod_Metadata() {
+    WithStreamedUnaryMethod_Entity() {
       ::grpc::Service::MarkMethodStreamed(0,
         new ::grpc::internal::StreamedUnaryHandler<
           ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>(
             [this](::grpc::ServerContext* context,
                    ::grpc::ServerUnaryStreamer<
                      ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* streamer) {
-                       return this->StreamedMetadata(context,
+                       return this->StreamedEntity(context,
                          streamer);
                   }));
     }
-    ~WithStreamedUnaryMethod_Metadata() override {
+    ~WithStreamedUnaryMethod_Entity() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status Metadata(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
+    ::grpc::Status Entity(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::holoscan::entity::EntityResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     // replace default version of method with streamed unary
-    virtual ::grpc::Status StreamedMetadata(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::holoscan::entity::EntityRequest,::holoscan::entity::EntityResponse>* server_unary_streamer) = 0;
+    virtual ::grpc::Status StreamedEntity(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::holoscan::entity::EntityRequest,::holoscan::entity::EntityResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_Metadata<Service > StreamedUnaryService;
-  template <class BaseClass>
-  class WithSplitStreamingMethod_MetadataStream : public BaseClass {
-   private:
-    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
-   public:
-    WithSplitStreamingMethod_MetadataStream() {
-      ::grpc::Service::MarkMethodStreamed(1,
-        new ::grpc::internal::SplitServerStreamingHandler<
-          ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>(
-            [this](::grpc::ServerContext* context,
-                   ::grpc::ServerSplitStreamer<
-                     ::holoscan::entity::EntityRequest, ::holoscan::entity::EntityResponse>* streamer) {
-                       return this->StreamedMetadataStream(context,
-                         streamer);
-                  }));
-    }
-    ~WithSplitStreamingMethod_MetadataStream() override {
-      BaseClassMustBeDerivedFromService(this);
-    }
-    // disable regular version of this method
-    ::grpc::Status MetadataStream(::grpc::ServerContext* /*context*/, const ::holoscan::entity::EntityRequest* /*request*/, ::grpc::ServerWriter< ::holoscan::entity::EntityResponse>* /*writer*/) override {
-      abort();
-      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
-    }
-    // replace default version of method with split streamed
-    virtual ::grpc::Status StreamedMetadataStream(::grpc::ServerContext* context, ::grpc::ServerSplitStreamer< ::holoscan::entity::EntityRequest,::holoscan::entity::EntityResponse>* server_split_streamer) = 0;
-  };
-  typedef WithSplitStreamingMethod_MetadataStream<Service > SplitStreamedService;
-  typedef WithStreamedUnaryMethod_Metadata<WithSplitStreamingMethod_MetadataStream<Service > > StreamedService;
+  typedef WithStreamedUnaryMethod_Entity<Service > StreamedUnaryService;
+  typedef Service SplitStreamedService;
+  typedef WithStreamedUnaryMethod_Entity<Service > StreamedService;
 };
 
 }  // namespace entity

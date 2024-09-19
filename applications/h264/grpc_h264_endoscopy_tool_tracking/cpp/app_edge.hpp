@@ -20,6 +20,7 @@
 
 #include <holoscan/holoscan.hpp>
 #include "app_base.hpp"
+#include "resource_queue.hpp"
 #include "video_input_fragment.hpp"
 #include "viz_fragment.hpp"
 
@@ -32,18 +33,24 @@ class AppEdge : public AppBase {
   void set_datapath(const std::string& path) { datapath_ = path; }
 
   void compose() override {
+    HOLOSCAN_LOG_INFO("===============AppEdge===============");
+    using namespace holoscan;
     auto width = 854;
     auto height = 480;
 
-    auto video_in = make_fragment<VideoInputFragment>("video_in", datapath_);
+    auto video_in = make_fragment<VideoInputFragment>(
+        "video_in", datapath_);
     auto viz = make_fragment<VizFragment>("viz", width, height);
 
     add_flow(video_in,
              viz,
-             {{"decoder_output_format_converter.tensor", "holoviz.receivers"},
-              {"grpc_client.output", "holoviz.receivers"}});
+             {{"decoder_output_format_converter.tensor", "visualizer_op.receivers"},
+              {"incoming_responses.output", "visualizer_op.receivers"}});
+
   }
+
+ private:
 };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking
 
-#endif
+#endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_APP_EDGE_HPP */

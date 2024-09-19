@@ -16,9 +16,10 @@ namespace holoscan::ops {
 
 class TensorProto {
  public:
-  static EntityRequest tensor_to_entity_request(const nvidia::gxf::Entity& gxf_entity);
+  static void tensor_to_entity_request(const nvidia::gxf::Entity& gxf_entity,
+                                       std::shared_ptr<EntityRequest> request);
   static void tensor_to_entity_response(const nvidia::gxf::Entity& gxf_entity,
-                                        EntityResponse* response);
+                                        std::shared_ptr<EntityResponse> response);
   static void entity_request_to_tensor(const EntityRequest* entity_request,
                                        nvidia::gxf::Entity& gxf_entity,
                                        nvidia::gxf::Handle<nvidia::gxf::Allocator> gxf_allocator);
