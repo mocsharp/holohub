@@ -51,8 +51,8 @@ class VideoInputFragment : public holoscan::Fragment {
                                           Arg("recess_period") = std::string("25hz")),
         Arg("pool") = make_resource<UnboundedAllocator>("pool"));
 
-    auto outgoing_requets = make_operator<GrpcClientRequestOp>(
-        "outgoing_requets",
+    auto outgoing_requests = make_operator<GrpcClientRequestOp>(
+        "outgoing_requests",
         Arg("request_queue") = request_queue_,
         Arg("response_queue") = response_queue_,
         Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
@@ -87,7 +87,7 @@ class VideoInputFragment : public holoscan::Fragment {
         from_config("decoder_output_format_converter"),
         Arg("pool") = make_resource<UnboundedAllocator>("pool"));
 
-    add_flow(bitstream_reader, outgoing_requets, {{"output_transmitter", "input"}});
+    add_flow(bitstream_reader, outgoing_requests, {{"output_transmitter", "input"}});
     add_flow(bitstream_reader, video_decoder_request, {{"output_transmitter", "input_frame"}});
     add_flow(video_decoder_response,
              decoder_output_format_converter,
