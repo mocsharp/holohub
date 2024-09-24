@@ -26,6 +26,7 @@
 #include <holoscan.pb.h>
 
 using namespace std;
+using namespace holoscan;
 
 using holoscan::entity::EntityRequest;
 using holoscan::entity::EntityResponse;
@@ -56,6 +57,8 @@ class AsynchronousConditionQueue : public holoscan::Resource {
     return item;
   }
 
+  bool empty() { return queue_->empty(); }
+
  private:
   shared_ptr<AsynchronousCondition> data_available_condition_;
   queue<nvidia::gxf::Entity>* queue_;
@@ -70,13 +73,13 @@ class ConditionVariableQueue : public holoscan::Resource {
 
   void push(DataT value) {
     queue_.push(value);
-    lock_guard<mutex> lock(response_available_mutex_);
-    response_available_condition_.notify_all();
+    // lock_guard<mutex> lock(response_available_mutex_);
+    // response_available_condition_.notify_all();
   }
 
   DataT pop() {
-    std::unique_lock<std::mutex> lock(response_available_mutex_);
-    response_available_condition_.wait(lock, [this]() { return !queue_.empty(); });
+    // std::unique_lock<std::mutex> lock(response_available_mutex_);
+    // response_available_condition_.wait(lock, [this]() { return !queue_.empty(); });
     auto item = queue_.front();
     queue_.pop();
     return item;
@@ -86,8 +89,8 @@ class ConditionVariableQueue : public holoscan::Resource {
 
  private:
   queue<DataT> queue_;
-  condition_variable response_available_condition_;
-  mutex response_available_mutex_;
+  // condition_variable response_available_condition_;
+  // mutex response_available_mutex_;
 };
 
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking

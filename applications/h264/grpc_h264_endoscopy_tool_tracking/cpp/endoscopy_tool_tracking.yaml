@@ -21,6 +21,11 @@ extensions:
   - libgxf_videoencoderio.so
   - ../../../../gxf_extensions/lstm_tensor_rt_inference/libgxf_lstm_tensor_rt_inference.so
 
+scheduler:
+  check_recession_period_ms: 0
+  worker_thread_number: 8
+  stop_on_deadlock: true
+  stop_on_deadlock_timeout: 500
 
 replayer:
   basename: "surgical_video"

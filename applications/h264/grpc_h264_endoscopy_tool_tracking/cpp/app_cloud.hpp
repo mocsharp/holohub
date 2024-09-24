@@ -50,6 +50,7 @@ class AppCloud : public AppBase {
         Arg("response_queue") = response_queue_,
         Arg("condition") = request_available_condition,
         Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
+
     auto response_condition = make_condition<AsynchronousCondition>("response_condition");
     auto video_decoder_context = make_resource<VideoDecoderContext>(
         "decoder-context", Arg("async_scheduling_term") = response_condition);
@@ -58,14 +59,12 @@ class AppCloud : public AppBase {
     auto video_decoder_request =
         make_operator<VideoDecoderRequestOp>("video_decoder_request",
                                              from_config("video_decoder_request"),
-                                             request_condition,
                                              Arg("async_scheduling_term") = request_condition,
                                              Arg("videodecoder_context") = video_decoder_context);
 
     auto video_decoder_response = make_operator<VideoDecoderResponseOp>(
         "video_decoder_response",
         from_config("video_decoder_response"),
-        response_condition,
         Arg("pool") = make_resource<UnboundedAllocator>("pool"),
         Arg("videodecoder_context") = video_decoder_context);
 
@@ -96,8 +95,8 @@ class AppCloud : public AppBase {
         Arg("device_allocator") = make_resource<UnboundedAllocator>("device_allocator"),
         Arg("host_allocator") = make_resource<UnboundedAllocator>("host_allocator"));
 
-    auto grpc_results = make_operator<GrpcServerResponseOp>(
-        "grpc_results", Arg("response_queue") = response_queue_);
+    auto grpc_response = make_operator<GrpcServerResponseOp>(
+        "grpc_response", Arg("response_queue") = response_queue_);
 
     add_flow(grpc_request_op, video_decoder_request, {{"output", "input_frame"}});
     add_flow(video_decoder_response,
@@ -108,7 +107,7 @@ class AppCloud : public AppBase {
     add_flow(rgb_float_format_converter, lstm_inferer);
     add_flow(lstm_inferer, tool_tracking_postprocessor, {{"tensor", "in"}});
     add_flow(tool_tracking_postprocessor,
-             grpc_results,
+             grpc_response,
              {{"out_coords", "input"}, {"out_mask", "input"}});
   }
 

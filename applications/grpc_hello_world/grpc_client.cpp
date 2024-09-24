@@ -78,8 +78,7 @@ class GrpcClientOperator : public holoscan::Operator {
 
   void start() override {
     HOLOSCAN_LOG_INFO("Starting gRPC client...");
-    grpc_client_ = std::make_shared<GrpClientT>(
-        GrpClientT(grpc::CreateChannel(server_address_.get(), grpc::InsecureChannelCredentials())));
+    grpc_client_ = std::make_shared<GrpClientT>(GrpClientT(server_address_));
   }
 
   void setup(OperatorSpec& spec) override {

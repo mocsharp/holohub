@@ -109,12 +109,8 @@ int main(int argc, char** argv) {
   HOLOSCAN_LOG_INFO("Using input data from {}", data_directory);
   app->set_datapath(data_directory);
 
-  // auto scheduler = app->make_scheduler<holoscan::MultiThreadScheduler>(
-  //   "event-scheduler",
-  //   Arg("worker_thread_number", 3L),
-  //   Arg("stop_on_deadlock", false)
-  // );
-  // app->scheduler(scheduler);
+  app->scheduler(app->make_scheduler<holoscan::MultiThreadScheduler>(
+      "multithread-scheduler", app->from_config("scheduler")));
   app->run();
 
   return 0;

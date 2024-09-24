@@ -11,10 +11,12 @@
 #include <holoscan.pb.h>
 #include <tensor_proto.hpp>
 
+#include "entity_client.hpp"
 #include "entity_server.hpp"
 #include "resource_queue.hpp"
 
 using holoscan::entity::EntityRequest;
+using holoscan::entity::EntityResponse;
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -64,10 +66,7 @@ class GrpcClientRequestOp : public holoscan::Operator {
   GrpcClientRequestOp() = default;
 
   void start() override {
-    entity_client_ = make_shared<EntityClient>(
-        EntityClient(grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials()),
-                     request_queue_,
-                     response_queue_));
+    entity_client_ = make_shared<EntityClient>(EntityClient("localhost:50051"));
   }
 
   void setup(OperatorSpec& spec) override {
@@ -89,7 +88,37 @@ class GrpcClientRequestOp : public holoscan::Operator {
     holoscan::ops::TensorProto::tensor_to_entity_request(maybe_input_message.value(), request);
     request_queue_->push(request);
     if (!stream_channel_started_) {
-      entity_client_->EndoscopyToolTracking(allocator_, fragment()->executor().context());
+      entity_client_->EndoscopyToolTracking(
+          // Handle outgoing requests
+          [this](std::shared_ptr<EntityRequest>& request) {
+            if (request_status_ == EntityClient::DONE) [[unlikely]] { return EntityClient::DONE; }
+
+            if (request_queue_->empty()) { return EntityClient::WAIT; }
+
+            request = request_queue_->pop();
+            request->set_service("endoscopy_tool_tracking");
+
+            HOLOSCAN_LOG_DEBUG("endoscopy_tool_tracking: Sending request");
+            return EntityClient::WRITE;
+          },
+          // Handle incoming responses
+          [this](EntityResponse& response) {
+            auto gxf_allocator = nvidia::gxf::Handle<nvidia::gxf::Allocator>::Create(
+                fragment()->executor().context(), allocator_->gxf_cid());
+            auto out_message = nvidia::gxf::Entity::New(fragment()->executor().context());
+            holoscan::ops::TensorProto::entity_response_to_tensor(
+                response, out_message.value(), gxf_allocator.value());
+            response_queue_->push(out_message.value());
+            HOLOSCAN_LOG_DEBUG("Response received and queued");
+          },
+          // Complete the requests
+          [this](const grpc::Status& status) {
+            if (!status.ok()) {
+              HOLOSCAN_LOG_ERROR("gRPC call failed: {}", status.error_message());
+              return;
+            }
+            HOLOSCAN_LOG_INFO("gRPC call completed");
+          });
       stream_channel_started_ = true;
     }
   }
@@ -100,6 +129,7 @@ class GrpcClientRequestOp : public holoscan::Operator {
   Parameter<std::shared_ptr<Allocator>> allocator_;
   std::shared_ptr<EntityClient> entity_client_;
   bool stream_channel_started_ = false;
+  EntityClient::RequestStatus request_status_ = EntityClient::WAIT;
 };
 
 class GrpcServerResponseOp : public holoscan::Operator {
@@ -144,6 +174,7 @@ class GrpcServerRequestOp : public holoscan::Operator {
   }
 
   void stop() override {
+    shutdown_ = true;
     condition_->event_state(AsynchronousEventState::EVENT_NEVER);
     HOLOSCAN_LOG_INFO("Stopping gRPC server...");
     server_->Shutdown();
@@ -170,13 +201,36 @@ class GrpcServerRequestOp : public holoscan::Operator {
     auto request = request_queue_->pop();
     auto result = nvidia::gxf::Entity(std::move(request));
     op_output.emit(result, "output");
-    condition_->event_state(AsynchronousEventState::EVENT_WAITING);
+
+    if (request_queue_->empty()) { condition_->event_state(AsynchronousEventState::EVENT_WAITING); }
   }
 
  private:
   void StartInternal() {
     HoloscanEntityServiceImpl service(
-        request_queue_, response_queue_, allocator_, fragment()->executor().context());
+        // Handle incoming requests
+        [this](EntityRequest& request) {
+          auto route = request.service();
+          if (route == "endoscopy_tool_tracking") {
+            auto gxf_allocator = nvidia::gxf::Handle<nvidia::gxf::Allocator>::Create(
+                fragment()->executor().context(), allocator_->gxf_cid());
+            auto out_message = nvidia::gxf::Entity::New(fragment()->executor().context());
+
+            holoscan::ops::TensorProto::entity_request_to_tensor(
+                &request, out_message.value(), gxf_allocator.value());
+
+            request_queue_->push(out_message.value());
+            HOLOSCAN_LOG_INFO("endoscopy_tool_tracking: tensor received and queued");
+          }
+        },
+        // Handle outgoing responses
+        [this](std::shared_ptr<EntityResponse>& response) {
+          if (response_queue_->empty()) { return HoloscanEntityServiceImpl::WAIT; }
+          response = response_queue_->pop();
+          HOLOSCAN_LOG_INFO("response message set");
+          return HoloscanEntityServiceImpl::WRITE;
+        },
+        std::ref(shutdown_));
     grpc::EnableDefaultHealthCheckService(true);
     grpc::reflection::InitProtoReflectionServerBuilderPlugin();
     ServerBuilder builder;
@@ -195,6 +249,7 @@ class GrpcServerRequestOp : public holoscan::Operator {
   Parameter<std::string> server_address_;
   std::thread server_thread_;
   std::unique_ptr<Server> server_;
+  std::atomic<bool> shutdown_ = false;
 };
 
 // class TestOp : public holoscan::Operator {
