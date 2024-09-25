@@ -57,43 +57,44 @@ class VideoInputFragment : public holoscan::Fragment {
         Arg("response_queue") = response_queue_,
         Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
 
-    auto incoming_responses = make_operator<GrpcClientResponseOp>(
-        "incoming_responses",
-        Arg("response_queue") = response_queue_,
-        Arg("allocator") = make_resource<UnboundedAllocator>("pool"),
-        Arg("condition") = condition_);
+    // auto incoming_responses = make_operator<GrpcClientResponseOp>(
+    //     "incoming_responses",
+    //     Arg("response_queue") = response_queue_,
+    //     Arg("allocator") = make_resource<UnboundedAllocator>("pool"),
+    //     Arg("condition") = condition_);
 
-    auto response_condition = make_condition<AsynchronousCondition>("response_condition");
-    auto video_decoder_context = make_resource<VideoDecoderContext>(
-        "decoder-context", Arg("async_scheduling_term") = response_condition);
+    // auto response_condition = make_condition<AsynchronousCondition>("response_condition");
+    // auto video_decoder_context = make_resource<VideoDecoderContext>(
+    //     "decoder-context", Arg("async_scheduling_term") = response_condition);
 
-    auto request_condition = make_condition<AsynchronousCondition>("request_condition");
-    auto video_decoder_request =
-        make_operator<VideoDecoderRequestOp>("video_decoder_request",
-                                             from_config("video_decoder_request"),
-                                             request_condition,
-                                             Arg("async_scheduling_term") = request_condition,
-                                             Arg("videodecoder_context") = video_decoder_context);
+    // auto request_condition = make_condition<AsynchronousCondition>("request_condition");
+    // auto video_decoder_request =
+    //     make_operator<VideoDecoderRequestOp>("video_decoder_request",
+    //                                          from_config("video_decoder_request"),
+    //                                          request_condition,
+    //                                          Arg("async_scheduling_term") = request_condition,
+    //                                          Arg("videodecoder_context") = video_decoder_context);
 
-    auto video_decoder_response = make_operator<VideoDecoderResponseOp>(
-        "video_decoder_response",
-        from_config("video_decoder_response"),
-        response_condition,
-        Arg("pool") = make_resource<UnboundedAllocator>("pool"),
-        Arg("videodecoder_context") = video_decoder_context);
+    // auto video_decoder_response = make_operator<VideoDecoderResponseOp>(
+    //     "video_decoder_response",
+    //     from_config("video_decoder_response"),
+    //     response_condition,
+    //     Arg("pool") = make_resource<UnboundedAllocator>("pool"),
+    //     Arg("videodecoder_context") = video_decoder_context);
 
-    auto decoder_output_format_converter = make_operator<ops::FormatConverterOp>(
-        "decoder_output_format_converter",
-        from_config("decoder_output_format_converter"),
-        Arg("pool") = make_resource<UnboundedAllocator>("pool"));
+    // auto decoder_output_format_converter = make_operator<ops::FormatConverterOp>(
+    //     "decoder_output_format_converter",
+    //     from_config("decoder_output_format_converter"),
+    //     Arg("pool") = make_resource<UnboundedAllocator>("pool"));
 
     add_flow(bitstream_reader, outgoing_requests, {{"output_transmitter", "input"}});
-    add_flow(bitstream_reader, video_decoder_request, {{"output_transmitter", "input_frame"}});
-    add_flow(video_decoder_response,
-             decoder_output_format_converter,
-             {{"output_transmitter", "source_video"}});
 
-    add_operator(incoming_responses);
+    // add_flow(bitstream_reader, video_decoder_request, {{"output_transmitter", "input_frame"}});
+    // add_flow(video_decoder_response,
+    //          decoder_output_format_converter,
+    //          {{"output_transmitter", "source_video"}});
+
+    // add_operator(incoming_responses);
   }
 
  private:

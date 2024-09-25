@@ -152,19 +152,23 @@ class App : public holoscan::Application {
     auto video_decoder_context = make_resource<VideoDecoderContext>(
         "decoder-context", Arg("async_scheduling_term") = response_condition);
 
-    auto request_condition = make_condition<AsynchronousCondition>("request_condition");
-    auto video_decoder_request =
-        make_operator<VideoDecoderRequestOp>("video_decoder_request",
-                                             from_config("video_decoder_request"),
-                                             Arg("async_scheduling_term") = request_condition,
-                                             Arg("videodecoder_context") = video_decoder_context);
+    auto request_condition =
+        make_condition<AsynchronousCondition>("request_condition");
+    auto video_decoder_request = make_operator<VideoDecoderRequestOp>(
+        "video_decoder_request",
+        from_config("video_decoder_request"),
+        // make_condition<CountCondition>(30),
+        Arg("async_scheduling_term") = request_condition,
+        Arg("videodecoder_context") = video_decoder_context);
 
-    auto video_decoder_response =
-        make_operator<VideoDecoderResponseOp>("video_decoder_response",
-                                              from_config("video_decoder_response"),
-                                              Arg("pool") = make_resource<BlockMemoryPool>(
-                                                  "pool", 1, source_block_size, source_num_blocks),
-                                              Arg("videodecoder_context") = video_decoder_context);
+    auto video_decoder_response = make_operator<VideoDecoderResponseOp>(
+        "video_decoder_response",
+        from_config("video_decoder_response"),
+        // make_condition<CountCondition>(30),
+        Arg("pool") =
+            make_resource<BlockMemoryPool>(
+                "pool", 1, source_block_size, source_num_blocks),
+        Arg("videodecoder_context") = video_decoder_context);
 
     auto decoder_output_format_converter =
         make_operator<ops::FormatConverterOp>("decoder_output_format_converter",
@@ -233,6 +237,10 @@ int main(int argc, char** argv) {
   }
 
   if (data_path != "") app->set_datapath(data_path);
+
+  app->scheduler(app->make_scheduler<holoscan::MultiThreadScheduler>(
+      "multithread-scheduler", app->from_config("scheduler")));
+
   app->run();
 
   return 0;

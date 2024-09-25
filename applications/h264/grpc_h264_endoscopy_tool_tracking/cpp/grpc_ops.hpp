@@ -98,7 +98,7 @@ class GrpcClientRequestOp : public holoscan::Operator {
             request = request_queue_->pop();
             request->set_service("endoscopy_tool_tracking");
 
-            HOLOSCAN_LOG_DEBUG("endoscopy_tool_tracking: Sending request");
+            HOLOSCAN_LOG_INFO("endoscopy_tool_tracking: Sending request");
             return EntityClient::WRITE;
           },
           // Handle incoming responses
@@ -109,7 +109,7 @@ class GrpcClientRequestOp : public holoscan::Operator {
             holoscan::ops::TensorProto::entity_response_to_tensor(
                 response, out_message.value(), gxf_allocator.value());
             response_queue_->push(out_message.value());
-            HOLOSCAN_LOG_DEBUG("Response received and queued");
+            HOLOSCAN_LOG_INFO("Response received and queued");
           },
           // Complete the requests
           [this](const grpc::Status& status) {
@@ -198,11 +198,15 @@ class GrpcServerRequestOp : public holoscan::Operator {
 
   void compute(InputContext& op_input, OutputContext& op_output,
                ExecutionContext& context) override {
+    HOLOSCAN_LOG_INFO("GrpcServerRequestOp::compute");
     auto request = request_queue_->pop();
     auto result = nvidia::gxf::Entity(std::move(request));
     op_output.emit(result, "output");
 
-    if (request_queue_->empty()) { condition_->event_state(AsynchronousEventState::EVENT_WAITING); }
+    if (request_queue_->empty()) {
+      HOLOSCAN_LOG_INFO("GrpcServerRequestOp::compute: request_queue_ is empty");
+      condition_->event_state(AsynchronousEventState::EVENT_WAITING);
+    }
   }
 
  private:
@@ -210,6 +214,7 @@ class GrpcServerRequestOp : public holoscan::Operator {
     HoloscanEntityServiceImpl service(
         // Handle incoming requests
         [this](EntityRequest& request) {
+          HOLOSCAN_LOG_INFO("GrpcServerRequestOp::StartInternal: request received");
           auto route = request.service();
           if (route == "endoscopy_tool_tracking") {
             auto gxf_allocator = nvidia::gxf::Handle<nvidia::gxf::Allocator>::Create(

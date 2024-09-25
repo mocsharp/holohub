@@ -680,7 +680,7 @@ build() {
   run_command cmake -S . -B ${build_path} ${cmake_extra_args} -DCMAKE_BUILD_TYPE=${build_type} ${holoscan_sdk} ${application}
   ret=$?
   check_exit_code $ret "Error building application."
-  run_command cmake --build ${build_path} -j
+  run_command cmake --build ${build_path} -j 10
   ret=$?
   check_exit_code $ret "Error building application."
 

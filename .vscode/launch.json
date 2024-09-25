@@ -801,6 +801,10 @@
                 {
                     "name": "LD_LIBRARY_PATH",
                     "value": "${env:LD_LIBRARY_PATH}:/usr/lib/aarch64-linux-gnu/tegra/"
+                },
+                {
+                    "name": "HOLOSCAN_LOG_LEVEL",
+                    "value": "DEBUG"
                 }
             ],
             "stopAtEntry": false,

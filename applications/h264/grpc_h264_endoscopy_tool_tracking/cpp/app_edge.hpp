@@ -40,12 +40,14 @@ class AppEdge : public AppBase {
 
     auto video_in = make_fragment<VideoInputFragment>(
         "video_in", datapath_);
-    auto viz = make_fragment<VizFragment>("viz", width, height);
+    // auto viz = make_fragment<VizFragment>("viz", width, height);
 
-    add_flow(video_in,
-             viz,
-             {{"decoder_output_format_converter.tensor", "visualizer_op.receivers"},
-              {"incoming_responses.output", "visualizer_op.receivers"}});
+    add_fragment(video_in);
+
+    // add_flow(video_in,
+    //          viz,
+    //          {{"decoder_output_format_converter.tensor", "visualizer_op.receivers"},
+    //           {"incoming_responses.output", "visualizer_op.receivers"}});
 
   }
 
