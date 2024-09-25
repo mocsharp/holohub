@@ -34,4 +34,4 @@ add_holohub_application(h264_endoscopy_tool_tracking_distributed DEPENDS
                                   tool_tracking_postprocessor)
 
 add_holohub_application(h264_video_decode DEPENDS
-                        OPERATORS video_decoder video_read_bitstream)
+                        OPERATORS video_decoder video_read_bitstream grpc_operators)

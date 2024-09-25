@@ -28,6 +28,7 @@ target_link_libraries(h264_video_decode
   holoscan::ops::gxf_codelet
   holoscan::ops::format_converter
   holoscan::ops::holoviz
+  grpc_operators
 )
 
 # Copy config file
