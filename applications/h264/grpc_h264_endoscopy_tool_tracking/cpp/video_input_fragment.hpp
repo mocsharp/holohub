@@ -24,7 +24,7 @@
 
 #include "app_base.hpp"
 #include "entity_client.hpp"
-#include "grpc_ops.hpp"
+#include "grpc_client_ops.hpp"
 #include "gxf_imports.hpp"
 
 namespace holohub::grpc_h264_endoscopy_tool_tracking {
@@ -40,7 +40,7 @@ class VideoInputFragment : public holoscan::Fragment {
   void compose() override {
     condition_ = make_condition<AsynchronousCondition>("response_available_condition");
     request_queue_ = make_resource<ConditionVariableQueue<std::shared_ptr<EntityRequest>>>("request_queue");
-    response_queue_ = make_resource<AsynchronousConditionQueue>("response_queue", condition_);
+    response_queue_ = make_resource<ConditionVariableQueue<std::shared_ptr<nvidia::gxf::Entity>>>("response_queue");
 
     auto bitstream_reader = make_operator<VideoReadBitstreamOp>(
         "bitstream_reader",
@@ -99,7 +99,7 @@ class VideoInputFragment : public holoscan::Fragment {
 
  private:
   std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityRequest>>> request_queue_;
-  std::shared_ptr<AsynchronousConditionQueue> response_queue_;
+  std::shared_ptr<ConditionVariableQueue<std::shared_ptr<nvidia::gxf::Entity>>> response_queue_;
   std::shared_ptr<AsynchronousCondition> condition_;
 };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking

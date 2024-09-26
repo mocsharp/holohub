@@ -46,6 +46,7 @@ void TensorProto::gxf_tensor_to_proto(
   if (!tensors) { throw std::runtime_error("Tensor not found"); }
 
   for (auto tensor : tensors.value()) {
+    HOLOSCAN_LOG_INFO("Tensor name: {}", tensor->name());
     holoscan::entity::Tensor& tensor_proto = (*tensor_map)[tensor->name()];
     for (uint32_t i = 0; i < (*tensor)->shape().rank(); i++) {
       tensor_proto.add_dimensions((*tensor)->shape().dimension(i));

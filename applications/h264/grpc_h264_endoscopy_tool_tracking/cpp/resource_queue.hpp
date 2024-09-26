@@ -25,7 +25,6 @@
 
 #include <holoscan.pb.h>
 
-using namespace std;
 using namespace holoscan;
 
 using holoscan::entity::EntityRequest;
@@ -37,18 +36,18 @@ class AsynchronousConditionQueue : public holoscan::Resource {
  public:
   HOLOSCAN_RESOURCE_FORWARD_ARGS_SUPER(AsynchronousConditionQueue, Resource)
 
-  explicit AsynchronousConditionQueue(shared_ptr<AsynchronousCondition> request_available_condition)
+  explicit AsynchronousConditionQueue(std::shared_ptr<AsynchronousCondition> request_available_condition)
       : data_available_condition_(request_available_condition) {
-    queue_ = new queue<nvidia::gxf::Entity>();
+    queue_ = new std::queue<nvidia::gxf::Entity>();
   }
 
   ~AsynchronousConditionQueue() { delete queue_; }
 
   void push(nvidia::gxf::Entity entity) {
     queue_->push(entity);
-    if (data_available_condition_->event_state() == AsynchronousEventState::EVENT_WAITING) {
-      data_available_condition_->event_state(AsynchronousEventState::EVENT_DONE);
-    }
+    // if (data_available_condition_->event_state() == AsynchronousEventState::EVENT_WAITING) {
+    //   data_available_condition_->event_state(AsynchronousEventState::EVENT_DONE);
+    // }
   }
 
   nvidia::gxf::Entity pop() {
@@ -60,8 +59,8 @@ class AsynchronousConditionQueue : public holoscan::Resource {
   bool empty() { return queue_->empty(); }
 
  private:
-  shared_ptr<AsynchronousCondition> data_available_condition_;
-  queue<nvidia::gxf::Entity>* queue_;
+  std::shared_ptr<AsynchronousCondition> data_available_condition_;
+  std::queue<nvidia::gxf::Entity>* queue_;
 };
 
 template <typename DataT>
@@ -72,25 +71,28 @@ class ConditionVariableQueue : public holoscan::Resource {
   ConditionVariableQueue() : queue_() {}
 
   void push(DataT value) {
+    std::lock_guard<std::mutex> lock(response_available_mutex_);
     queue_.push(value);
-    // lock_guard<mutex> lock(response_available_mutex_);
-    // response_available_condition_.notify_all();
+    data_available_condition_.notify_one();
   }
 
   DataT pop() {
-    // std::unique_lock<std::mutex> lock(response_available_mutex_);
-    // response_available_condition_.wait(lock, [this]() { return !queue_.empty(); });
+    std::unique_lock<std::mutex> lock(response_available_mutex_);
+    data_available_condition_.wait(lock, [this]() { return !queue_.empty(); });
     auto item = queue_.front();
     queue_.pop();
     return item;
   }
 
-  bool empty() { return queue_.empty(); }
+  bool empty() {
+    std::lock_guard<std::mutex> lock(response_available_mutex_);
+    return queue_.empty();
+  }
 
  private:
-  queue<DataT> queue_;
-  // condition_variable response_available_condition_;
-  // mutex response_available_mutex_;
+  std::queue<DataT> queue_;
+  std::condition_variable data_available_condition_;
+  std::mutex response_available_mutex_;
 };
 
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking

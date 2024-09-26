@@ -935,6 +935,10 @@
                 {
                     "name": "HOLOSCAN_LOG_LEVEL",
                     "value": "DEBUG"
+                },
+                {
+                    "name": "GRPC_TRACE",
+                    "value": "all"
                 }
             ],
             "stopAtEntry": false,

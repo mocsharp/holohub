@@ -26,7 +26,7 @@
 #include <holoscan/operators/format_converter/format_converter.hpp>
 #include <holoscan/operators/holoviz/holoviz.hpp>
 
-#include "grpc_ops.hpp"
+#include "grpc_server_ops.hpp"
 #include "resource_queue.hpp"
 
 using holoscan::entity::EntityResponse;
@@ -102,22 +102,21 @@ class AppCloud : public AppBase {
     // add_flow(decoder_output_format_converter, visualizer,
     //     {{"tensor", "receivers"}});
 
-
     auto request_available_condition =
         make_condition<AsynchronousCondition>("request_available_condition");
-    request_queue_ =
-        make_resource<AsynchronousConditionQueue>("request_queue", request_available_condition);
+    request_queue_ = make_resource<ConditionVariableQueue<std::shared_ptr<nvidia::gxf::Entity>>>(
+        "request_queue");
     response_queue_ =
         make_resource<ConditionVariableQueue<std::shared_ptr<EntityResponse>>>("response_queue");
 
     auto grpc_request_op = make_operator<GrpcServerRequestOp>(
         "grpc_request_op",
         Arg("server_address") = std::string("0.0.0.0:50051"),
-    //     make_condition<PeriodicCondition>("periodic-condition",
-    //                                       Arg("recess_period") = std::string("60hz")),
+        make_condition<PeriodicCondition>("periodic-condition",
+                                          Arg("recess_period") = std::string("60hz")),
         Arg("request_queue") = request_queue_,
         Arg("response_queue") = response_queue_,
-        Arg("condition") = request_available_condition,
+        // Arg("condition") = request_available_condition,
         Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
 
     auto response_condition = make_condition<AsynchronousCondition>("response_condition");
@@ -167,10 +166,13 @@ class AppCloud : public AppBase {
     // auto grpc_response = make_operator<GrpcServerResponseOp>(
     //     "grpc_response", Arg("response_queue") = response_queue_);
 
-    add_flow(grpc_request_op, video_decoder_request, {{"output", "input_frame"}});
+    auto convert_op = make_operator<TestConvertOp>(
+        "convert_op", Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
+
+    add_flow(grpc_request_op, convert_op, {{"output", "input"}});
+    add_flow(convert_op, video_decoder_request, {{"output", "input_frame"}});
     // add_flow(bitstream_reader, video_decoder_request,
     //     {{"output_transmitter", "input_frame"}});
-
 
     add_flow(video_decoder_response,
              decoder_output_format_converter,
@@ -179,10 +181,11 @@ class AppCloud : public AppBase {
         decoder_output_format_converter, rgb_float_format_converter, {{"tensor", "source_video"}});
     add_flow(rgb_float_format_converter, lstm_inferer);
     add_flow(lstm_inferer, tool_tracking_postprocessor, {{"tensor", "in"}});
+    // add_flow(tool_tracking_postprocessor, grpc_response, {{"out_coords", "input"}});
     // add_flow(tool_tracking_postprocessor,
     //          grpc_response,
     //          {{"out_coords", "input"}, {"out_mask", "input"}});
-    //     Arg("pool") = make_resource<UnboundedAllocator>("pool"));
+    // Arg("pool") = make_resource<UnboundedAllocator>("pool"));
     // add_flow(tool_tracking_postprocessor,
     //          grpc_response,
     //          {{"out_coords", "input"}, {"out_mask", "input"}});
@@ -193,13 +196,12 @@ class AppCloud : public AppBase {
     add_flow(decoder_output_format_converter, visualizer,
         {{"tensor", "receivers"}});
 
-// visualizer,
-//     //     {{"tensor", "receivers"}});
-
+    // visualizer,
+    //     //     {{"tensor", "receivers"}});
   }
 
  private:
-  std::shared_ptr<AsynchronousConditionQueue> request_queue_;
+  std::shared_ptr<ConditionVariableQueue<std::shared_ptr<nvidia::gxf::Entity>>> request_queue_;
   std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>> response_queue_;
 };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking

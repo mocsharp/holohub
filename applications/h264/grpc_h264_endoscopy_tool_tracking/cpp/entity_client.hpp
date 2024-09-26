@@ -31,7 +31,6 @@
 
 using grpc::Channel;
 using grpc::ClientContext;
-using grpc::ServerContext;
 using grpc::Status;
 using holoscan::entity::Entity;
 using holoscan::entity::EntityRequest;
@@ -41,14 +40,14 @@ namespace holohub::grpc_h264_endoscopy_tool_tracking {
 
 class EntityClient {
  public:
-  enum RequestStatus { WAIT, WRITE, DONE };
+  using on_new_response_available_callback =
+      std::function<std::shared_ptr<nvidia::gxf::Entity>(EntityResponse& response)>;
 
-  using on_new_request_available_callback =
-      std::function<RequestStatus(std::shared_ptr<EntityRequest>& request)>;
-  using on_new_response_available_callback = std::function<void(EntityResponse& response)>;
-  using on_done_callback = std::function<void(const grpc::Status& status)>;
-
-  explicit EntityClient(const std::string& server_address) {
+  explicit EntityClient(
+      const std::string& server_address,
+      std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityRequest>>> request_queue,
+      std::shared_ptr<ConditionVariableQueue<std::shared_ptr<nvidia::gxf::Entity>>> response_queue)
+      : request_queue_(request_queue), response_queue_(response_queue) {
     channel_ = grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
     if (auto status = channel_->GetState(false); status == GRPC_CHANNEL_TRANSIENT_FAILURE) {
       HOLOSCAN_LOG_ERROR("Error initializing channel. Please check the server address.");
@@ -57,149 +56,91 @@ class EntityClient {
     stub_ = Entity::NewStub(channel_);
   }
 
-  void EndoscopyToolTracking(on_new_request_available_callback&& request_cb,
-                             on_new_response_available_callback&& response_cb,
-                             on_done_callback&& done_cb) {
-    class EntityStreamInternal : public grpc::ClientBidiReactor<EntityRequest, EntityResponse> {
-     public:
-      EntityStreamInternal(unique_ptr<Entity::Stub>& stub,
-                           on_new_request_available_callback& request_cb,
-                           on_new_response_available_callback& response_cb, on_done_callback& done)
-          : request_cb_(std::move(request_cb)),
-            response_cb_(std::move(response_cb)),
-            done_(std::move(done)) {
-        HOLOSCAN_LOG_DEBUG("New EndoscopyToolTracking async request");
-        stub->async()->EntityStream(&context_, this);
-        AddHold();
-        Read();
-        Write();
-        StartCall();
-      }
-
-      void OnWriteDone(bool ok) override { Write(); }
-
-      void OnReadDone(bool ok) override {
-        if (ok) {
-          response_cb_(response_);
-          Read();
-        }
-      }
-
-      void OnDone(const grpc::Status& status) override {
-        done_(status);
-        delete this;
-      }
-
-     private:
-      void Read() {
-        response_.Clear();
-        StartRead(&response_);
-      }
-
-      void Write() {
-        if (request_ != nullptr) request_->Clear();
-        switch (request_cb_(request_)) {
-          case RequestStatus::WRITE:
-            return StartWrite(&*request_);
-          case RequestStatus::DONE:
-            RemoveHold();
-            StartWritesDone();
-            break;
-        }
-      }
-
-      ClientContext context_;
-      std::shared_ptr<EntityRequest> request_;
-      EntityResponse response_;
-      on_new_request_available_callback request_cb_;
-      on_new_response_available_callback response_cb_;
-      on_done_callback done_;
-    };
-
-    new EntityStreamInternal(stub_, request_cb, response_cb, done_cb);
+  void EndoscopyToolTracking(on_new_response_available_callback&& response_cb) {
+    new EntityStreamInternal(this, response_cb);
   }
 
-  // void EndoscopyToolTracking(std::shared_ptr<Allocator> allocator, void* gxf_context) {
-  //   class EntityStreamInternal : public grpc::ClientBidiReactor<EntityRequest, EntityResponse> {
-  //    public:
-  //     explicit EntityStreamInternal(
-  //         Entity::Stub* stub,
-  //         std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityRequest>>> request_queue,
-  //         std::shared_ptr<AsynchronousConditionQueue> response_queue,
-  //         std::shared_ptr<Allocator> allocator, void* gxf_context)
-  //         : request_queue_(request_queue),
-  //           response_queue_(response_queue),
-  //           allocator_(allocator),
-  //           gxf_context_(gxf_context) {
-  //       stub->async()->EntityStream(&context_, this);
-  //       AddHold();
-  //       NextWrite();
-  //       StartRead(&response_);
-  //       StartCall();
-  //     }
-  //     void OnWriteDone(bool /*ok*/) override { NextWrite(); }
-  //     void OnReadDone(bool ok) override {
-  //       if (ok) {
-  //         auto out_message = nvidia::gxf::Entity::New(gxf_context_);
-  //         auto gxf_allocator = nvidia::gxf::Handle<nvidia::gxf::Allocator>::Create(
-  //             gxf_context_, allocator_->gxf_cid());
-  //         holoscan::ops::TensorProto::entity_response_to_tensor(
-  //             response_, out_message.value(), gxf_allocator.value());
-  //         response_queue_->push(out_message.value());
-  //         response_.Clear();
-  //         StartRead(&response_);
-  //       }
-  //     }
-  //     void OnDone(const Status& s) override {
-  //       std::unique_lock<std::mutex> l(mu_);
-  //       status_ = s;
-  //       done_ = true;
-  //       cv_.notify_one();
-  //     }
-  //     Status Await() {
-  //       std::unique_lock<std::mutex> l(mu_);
-  //       cv_.wait(l, [this] { return done_; });
-  //       return std::move(status_);
-  //     }
-
-  //    private:
-  //     void NextWrite() {
-  //       if (!request_queue_->empty()) {
-  //         auto request = request_queue_->pop();
-  //         // request.set_service("endoscopy_tool_tracking");
-  //         StartWrite(&*request);
-  //       } else {
-  //         // using namespace std::chrono_literals;
-  //         // std::this_thread::sleep_for(100ms);
-  //         // NextWrite();
-  //       }
-  //       // else {
-  //       //  StartWritesDone();
-  //       //  }
-  //     }
-  //     ClientContext context_;
-  //     EntityResponse response_;
-  //     std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityRequest>>> request_queue_;
-  //     std::shared_ptr<AsynchronousConditionQueue> response_queue_;
-  //     std::shared_ptr<Allocator> allocator_;
-  //     void* gxf_context_;
-  //     std::mutex mu_;
-  //     std::condition_variable cv_;
-  //     Status status_;
-  //     bool done_ = false;
-  //   };
-
-  //   EntityStreamInternal entity_stream(
-  //       stub_.get(), request_queue_, response_queue_, allocator, gxf_context);
-  //   Status status = entity_stream.Await();
-  //   if (!status.ok()) {
-  //     HOLOSCAN_LOG_ERROR("endoscopy_tool_tracking rpc failed: {}", status.error_message());
-  //   }
-  // }
-
  private:
+  class EntityStreamInternal : public grpc::ClientBidiReactor<EntityRequest, EntityResponse> {
+   public:
+    EntityStreamInternal(EntityClient* client, on_new_response_available_callback& response_cb)
+        : client_(client), response_cb_(response_cb) {
+      client_->stub_->async()->EntityStream(&context_, this);
+      AddHold();
+      Write();
+      Read();
+      StartCall();
+      writer_thread_ = std::thread(&EntityStreamInternal::ProcessOutgoingQueue, this);
+    }
+
+    ~EntityStreamInternal() { writer_thread_.join(); }
+
+    void OnWriteDone(bool ok) override {
+      // if (ok) {
+      //   Write();
+      // }
+      // else {
+      //   StartWritesDone();
+      // }
+      if (!ok) {
+        HOLOSCAN_LOG_WARN("grpc: write failed");
+        }
+    }
+
+    void OnReadDone(bool ok) override {
+      if (ok) {
+        auto entity = response_cb_(response_);
+
+        client_->response_queue_->push(entity);
+        HOLOSCAN_LOG_INFO("grpc: Response received and queued");
+      }
+    }
+
+    void OnDone(const grpc::Status& status) override {
+      if (!status.ok()) {
+        HOLOSCAN_LOG_ERROR("grpc: call failed: {}", status.error_message());
+        return;
+      }
+      HOLOSCAN_LOG_DEBUG("grpc client: client streaming complete");
+      delete this;
+    }
+
+   private:
+    void Read() {
+      response_.Clear();
+      StartRead(&response_);
+    }
+
+    void Write() {
+      if (!client_->request_queue_->empty()) {
+        std::shared_ptr<EntityRequest> request;
+        request = client_->request_queue_->pop();
+        request->set_service("endoscopy_tool_tracking");
+        StartWrite(&*request);
+        HOLOSCAN_LOG_INFO("grpc: Sending request");
+      }
+    }
+
+    void ProcessOutgoingQueue() {
+      while (true) { Write(); }
+    }
+
+    EntityClient* client_;
+    EntityResponse response_;
+    ClientContext context_;
+    on_new_response_available_callback response_cb_;
+
+    std::mutex request_mutex_;
+    std::condition_variable request_cv_;
+    std::thread writer_thread_;
+  };
+
+  std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityRequest>>> request_queue_;
+  std::shared_ptr<ConditionVariableQueue<std::shared_ptr<nvidia::gxf::Entity>>> response_queue_;
+
   std::shared_ptr<Channel> channel_;
   std::unique_ptr<Entity::Stub> stub_;
+  EntityStreamInternal* reactor_;
 };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking
 
