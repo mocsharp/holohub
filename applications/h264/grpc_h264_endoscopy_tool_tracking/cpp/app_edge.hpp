@@ -18,6 +18,9 @@
 #ifndef GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_APP_EDGE_HPP
 #define GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_APP_EDGE_HPP
 
+#include <thread>
+#include <chrono>
+
 #include <holoscan/holoscan.hpp>
 #include "app_base.hpp"
 #include "resource_queue.hpp"
@@ -49,6 +52,9 @@ class AppEdge : public AppBase {
     //          {{"decoder_output_format_converter.tensor", "visualizer_op.receivers"},
     //           {"incoming_responses.output", "visualizer_op.receivers"}});
 
+    using namespace std::chrono_literals;
+
+    std::this_thread::sleep_for(500ms);
   }
 
  private:

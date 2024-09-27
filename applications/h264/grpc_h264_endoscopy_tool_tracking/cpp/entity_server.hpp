@@ -43,48 +43,46 @@ namespace holohub::grpc_h264_endoscopy_tool_tracking {
 
 class HoloscanEntityServiceImpl final : public Entity::CallbackService {
  public:
-  enum RequestStatus { WAIT, WRITE };
+  using on_new_request_received_callback =
+      std::function<std::shared_ptr<nvidia::gxf::Entity>(EntityRequest& request)>;
 
-  using on_new_request_received_callback = std::function<void(EntityRequest& request)>;
-  using on_new_response_queued_callback =
-      std::function<RequestStatus(std::shared_ptr<EntityResponse>& response)>;
-
-  explicit HoloscanEntityServiceImpl(on_new_request_received_callback&& request_cb,
-                                     on_new_response_queued_callback&& response_cb,
-                                     const std::atomic<bool>& shutdown)
-      : request_cb_(request_cb), response_cb_(response_cb), shutdown_(shutdown) {}
+  explicit HoloscanEntityServiceImpl(
+      std::shared_ptr<ConditionVariableQueue<std::shared_ptr<nvidia::gxf::Entity>>> request_queue,
+      std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>> response_queue,
+      on_new_request_received_callback&& request_cb)
+      : request_queue_(request_queue), response_queue_(response_queue), request_cb_(request_cb) {
+        auto x = 1;
+      }
 
   grpc::ServerBidiReactor<EntityRequest, EntityResponse>* EntityStream(
       CallbackServerContext* context) override {
     class EntityStreamInternal : public grpc::ServerBidiReactor<EntityRequest, EntityResponse> {
      public:
-      EntityStreamInternal(on_new_request_received_callback& request_cb,
-                           on_new_response_queued_callback& response_cb,
-                           const std::atomic<bool>& shutdown)
-          : request_cb_(request_cb), response_cb_(response_cb), shutdown_(shutdown) {
+      EntityStreamInternal(HoloscanEntityServiceImpl* server) : server_(server) {
         Read();
-        Write();
+        writer_thread_ = std::thread(&EntityStreamInternal::ProcessOutgoingQueue, this);
       }
 
-      void OnDone() override { delete this; }
-
-      void OnReadDone(bool ok) override {
-        if (!ok) {
-          HOLOSCAN_LOG_WARN("Error reading request stream");
-          done_reading_ = true;
-          return FinishIfDone();
-        }
-        request_cb_(request_);
-        Read();
+      ~EntityStreamInternal() {
+        if (writer_thread_.joinable()) { writer_thread_.join(); }
       }
 
       void OnWriteDone(bool ok) override {
-        if (!ok) {
-          HOLOSCAN_LOG_WARN("Error writing response stream");
-          done_writing_ = true;
-          status_ = Status(grpc::StatusCode::UNKNOWN, "write failed");
+        if (!ok) { HOLOSCAN_LOG_WARN("grpc: write failed"); }
+      }
+
+      void OnReadDone(bool ok) override {
+        if (ok) {
+          auto entity = server_->request_cb_(request_);
+          server_->request_queue_->push(entity);
+          HOLOSCAN_LOG_INFO("grpc: Request received and queued");
+          Read();
         }
-        Write();
+      }
+
+      void OnDone() override {
+        HOLOSCAN_LOG_DEBUG("grpc server: server streaming complete");
+        delete this;
       }
 
      private:
@@ -93,37 +91,29 @@ class HoloscanEntityServiceImpl final : public Entity::CallbackService {
         StartRead(&request_);
       }
       void Write() {
-        if (response_ != nullptr) response_->Clear();
-        switch (response_cb_(response_)) {
-          case RequestStatus::WRITE:
-            return StartWrite(&*response_);
+        if (!server_->response_queue_->empty()) {
+          std::shared_ptr<EntityResponse> response;
+          response = server_->response_queue_->pop();
+          StartWrite(&*response);
+          HOLOSCAN_LOG_INFO("grpc: Sending response");
         }
+      }
+      void ProcessOutgoingQueue() {
+        while (true) { Write(); }
       }
 
-      void FinishIfDone() {
-        if (!finish_sent_ && ((done_reading_ && done_writing_) || shutdown_)) {
-          Finish(status_);
-          finish_sent_ = true;
-          return;
-        }
-      }
+      HoloscanEntityServiceImpl* server_;
       EntityRequest request_;
-      std::shared_ptr<EntityResponse> response_;
-      on_new_request_received_callback request_cb_;
-      on_new_response_queued_callback response_cb_;
-      const std::atomic<bool>& shutdown_;
-      Status status_;
-      bool done_reading_ = false;
-      bool done_writing_ = false;
-      bool finish_sent_ = false;
+      std::thread writer_thread_;
     };
-    return new EntityStreamInternal(request_cb_, response_cb_, std::ref(shutdown_));
+
+    return new EntityStreamInternal(this);
   }
 
  private:
+  std::shared_ptr<ConditionVariableQueue<std::shared_ptr<nvidia::gxf::Entity>>> request_queue_;
+  std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>> response_queue_;
   on_new_request_received_callback request_cb_;
-  on_new_response_queued_callback response_cb_;
-  const std::atomic<bool>& shutdown_;
 };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking
 
