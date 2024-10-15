@@ -149,7 +149,6 @@
             }
         },
         //#endregion asr_to_llm
-
         //#region sam2
         {
             "name": "(debugpy) sam2/python",
@@ -178,7 +177,6 @@
             }
         },
         //#endregion sam2
-
         //#region colonoscopy_segmentation
         {
             "name": "(debugpy) colonoscopy_segmentation/python",
@@ -694,7 +692,7 @@
                 "order": 8
             }
         },
-        //#endregion endoscopy_tool_tracking_distributed
+        //#endregion Python
         //#endregion endoscopy_tool_tracking_distributed
         //#region florence-2-vision
         {
@@ -803,6 +801,10 @@
                 {
                     "name": "LD_LIBRARY_PATH",
                     "value": "${env:LD_LIBRARY_PATH}:/usr/lib/aarch64-linux-gnu/tegra/"
+                },
+                {
+                    "name": "HOLOSCAN_LOG_LEVEL",
+                    "value": "DEBUG"
                 }
             ],
             "stopAtEntry": false,
@@ -853,6 +855,146 @@
             }
         },
         //#endregion h264_video_decode
+        //#region h264_endoscopy_tool_tracking_distributed
+        {
+            "name": "(gdb) h264_endoscopy_tool_tracking_distributed/cpp (all fragments)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build h264_endoscopy_tool_tracking_distributed",
+            "program": "${workspaceFolder}/build/h264_endoscopy_tool_tracking_distributed/applications/h264/h264_endoscopy_tool_tracking_distributed/cpp/h264_endoscopy_tool_tracking_distributed",
+            "environment": [
+                {
+                    "name": "HOLOSCAN_INPUT_PATH",
+                    "value": "${env:HOLOHUB_DATA_DIR}/endoscopy"
+                }
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/h264_endoscopy_tool_tracking_distributed/applications/h264/h264_endoscopy_tool_tracking_distributed/cpp",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "h264_endoscopy_tool_tracking_distributed",
+                "order": 1
+            }
+        },
+        {
+            "name": "(debugpy) h264_endoscopy_tool_tracking_distributed/python (all fragments)",
+            "type": "debugpy",
+            "request": "launch",
+            "preLaunchTask": "Build h264_endoscopy_tool_tracking_distributed",
+            "program": "${workspaceFolder}/applications/h264/h264_endoscopy_tool_tracking_distributed/python/h264_endoscopy_tool_tracking_distributed.py",
+            "cwd": "${workspaceFolder}/build/h264_endoscopy_tool_tracking_distributed/",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/build/h264_endoscopy_tool_tracking_distributed/python/lib:${env:PYTHONPATH}",
+                "HOLOSCAN_INPUT_PATH": "${env:HOLOHUB_DATA_DIR}/endoscopy"
+            },
+            "args": [
+                "--data",
+                "${env:HOLOHUB_DATA_DIR}/endoscopy"
+            ],
+            "presentation": {
+                "hidden": true,
+            }
+        },
+        {
+            "name": "(pythoncpp) h264_endoscopy_tool_tracking_distributed/python (all fragments)",
+            "type": "pythoncpp",
+            "request": "launch",
+            "pythonLaunchName": "(debugpy) h264_endoscopy_tool_tracking_distributed/python (all fragments)",
+            "cppConfig": "default (gdb) Attach",
+            "presentation": {
+                "hidden": false,
+                "group": "h264_endoscopy_tool_tracking_distributed",
+                "order": 2
+            }
+        },
+        //#endregion h264_endoscopy_tool_tracking_distributed
+        //#region grpc_h264_endoscopy_tool_tracking
+        {
+            "name": "(gdb) grpc_h264_endoscopy_tool_tracking/cpp (edge)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build grpc_h264_endoscopy_tool_tracking (delay 3s)",
+            "program": "${workspaceFolder}/build/grpc_h264_endoscopy_tool_tracking/applications/h264/grpc_h264_endoscopy_tool_tracking/cpp/grpc_h264_endoscopy_tool_tracking",
+            "args": [
+                "edge"
+            ],
+            "environment": [
+                {
+                    "name": "HOLOSCAN_INPUT_PATH",
+                    "value": "${env:HOLOHUB_DATA_DIR}/endoscopy"
+                },
+                {
+                    "name": "HOLOSCAN_LOG_LEVEL",
+                    "value": "INFO"
+                },
+                {
+                    "name": "GRPC_TRACE",
+                    "value": "all"
+                }
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/grpc_h264_endoscopy_tool_tracking/applications/h264/grpc_h264_endoscopy_tool_tracking/cpp",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "grpc_h264_endoscopy_tool_tracking",
+                "order": 1
+            }
+        },
+        {
+            "name": "(gdb) grpc_h264_endoscopy_tool_tracking/cpp (cloud)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build grpc_h264_endoscopy_tool_tracking",
+            "program": "${workspaceFolder}/build/grpc_h264_endoscopy_tool_tracking/applications/h264/grpc_h264_endoscopy_tool_tracking/cpp/grpc_h264_endoscopy_tool_tracking",
+            "args": [
+                "cloud"
+            ],
+            "environment": [
+                {
+                    "name": "HOLOSCAN_INPUT_PATH",
+                    "value": "${env:HOLOHUB_DATA_DIR}/endoscopy"
+                },
+                {
+                    "name": "HOLOSCAN_LOG_LEVEL",
+                    "value": "DEBUG"
+                }
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/grpc_h264_endoscopy_tool_tracking/applications/h264/grpc_h264_endoscopy_tool_tracking/cpp",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "grpc_h264_endoscopy_tool_tracking",
+                "order": 1
+            }
+        },
+        //#endregion grpc_h264_endoscopy_tool_tracking
         //#region volume_rendering
         {
             "name": "(gdb) volume_rendering/cpp",
@@ -1048,6 +1190,20 @@
                 "hidden": false,
                 "group": "grpc_hello_world",
                 "order": 12
+            }
+        },
+        {
+            "name": "(compound) grpc_h264_endoscopy_tool_tracking/cpp (cloud & edge)",
+            "configurations": [
+                "(gdb) grpc_h264_endoscopy_tool_tracking/cpp (cloud)",
+                "(gdb) grpc_h264_endoscopy_tool_tracking/cpp (edge)"
+            ],
+            "preLaunchTask": "Build grpc_h264_endoscopy_tool_tracking",
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "grpc_h264_endoscopy_tool_tracking",
+                "order": 11
             }
         },
     ]

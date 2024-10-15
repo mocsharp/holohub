@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights
+ * reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@
 
 #include <holoscan/core/resources/gxf/gxf_component_resource.hpp>
 #include <holoscan/operators/gxf_codelet/gxf_codelet.hpp>
+
+#include <tensor_proto.hpp>
 
 // Import h.264 GXF codelets and components as Holoscan operators and resources
 // Starting with Holoscan SDK v2.1.0, importing GXF codelets/components as Holoscan operators/
@@ -71,11 +73,48 @@ HOLOSCAN_WRAP_GXF_COMPONENT_AS_RESOURCE(VideoDecoderContext, "nvidia::gxf::Video
 // - outbuf_storage_type (int32_t): Output Buffer storage type, 0:kHost, 1:kDevice
 HOLOSCAN_WRAP_GXF_CODELET_AS_OPERATOR(VideoReadBitstreamOp, "nvidia::gxf::VideoReadBitStream")
 
+using namespace holoscan;
+class TestConvertOp : public holoscan::Operator {
+ public:
+  HOLOSCAN_OPERATOR_FORWARD_ARGS(TestConvertOp)
+
+  TestConvertOp() = default;
+
+  void setup(OperatorSpec& spec) override {
+    spec.param(allocator_, "allocator", "Allocator", "Output Allocator");
+    spec.input<holoscan::gxf::Entity>("input");
+    spec.output<holoscan::gxf::Entity>("output");
+  }
+
+  void compute(InputContext& op_input, OutputContext& op_output,
+               ExecutionContext& context) override {
+    auto maybe_input_message = op_input.receive<holoscan::gxf::Entity>("input");
+    if (!maybe_input_message) {
+      HOLOSCAN_LOG_ERROR("grpc: Failed to receive input message");
+      return;
+    }
+
+    auto request = std::make_shared<EntityRequest>();
+    holoscan::ops::TensorProto::tensor_to_entity_request(maybe_input_message.value(), request);
+
+    auto gxf_allocator = nvidia::gxf::Handle<nvidia::gxf::Allocator>::Create(
+        fragment()->executor().context(), allocator_->gxf_cid());
+    auto out_message = nvidia::gxf::Entity::New(fragment()->executor().context()).value();
+
+    holoscan::ops::TensorProto::entity_request_to_tensor(
+        request.get(), out_message, gxf_allocator.value());
+
+    auto result = nvidia::gxf::Entity(std::move(out_message));
+    op_output.emit(result, "output");
+  }
+
+ private:
+  Parameter<std::shared_ptr<Allocator>> allocator_;
+};
+
 class App : public holoscan::Application {
  public:
-  void set_datapath(const std::string& path) {
-      datapath = path;
-  }
+  void set_datapath(const std::string& path) { datapath = path; }
 
   /// @brief As of Holoscan SDK 2.1.0, the extension manager must be used to register any external
   /// GXF extensions in replace of the use of YAML configuration file.
@@ -105,11 +144,11 @@ class App : public holoscan::Application {
         make_condition<PeriodicCondition>("periodic-condition",
                                           Arg("recess_period") = std::string("25hz")),
         Arg("pool") =
-            make_resource<BlockMemoryPool>(
-                "pool", 0, source_block_size, source_num_blocks));
+            make_resource<BlockMemoryPool>("pool", 0, source_block_size, source_num_blocks));
 
-    auto response_condition =
-        make_condition<AsynchronousCondition>("response_condition");
+    auto convert_op = make_operator<TestConvertOp>(
+        "convert_op", Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
+    auto response_condition = make_condition<AsynchronousCondition>("response_condition");
     auto video_decoder_context = make_resource<VideoDecoderContext>(
         "decoder-context", Arg("async_scheduling_term") = response_condition);
 
@@ -118,12 +157,14 @@ class App : public holoscan::Application {
     auto video_decoder_request = make_operator<VideoDecoderRequestOp>(
         "video_decoder_request",
         from_config("video_decoder_request"),
+        // make_condition<CountCondition>(30),
         Arg("async_scheduling_term") = request_condition,
         Arg("videodecoder_context") = video_decoder_context);
 
     auto video_decoder_response = make_operator<VideoDecoderResponseOp>(
         "video_decoder_response",
         from_config("video_decoder_response"),
+        // make_condition<CountCondition>(30),
         Arg("pool") =
             make_resource<BlockMemoryPool>(
                 "pool", 1, source_block_size, source_num_blocks),
@@ -131,27 +172,26 @@ class App : public holoscan::Application {
 
     auto decoder_output_format_converter =
         make_operator<ops::FormatConverterOp>("decoder_output_format_converter",
-            from_config("decoder_output_format_converter"),
-            Arg("pool") = make_resource<BlockMemoryPool>(
-                "pool", 1, source_block_size, source_num_blocks));
+                                              from_config("decoder_output_format_converter"),
+                                              Arg("pool") = make_resource<BlockMemoryPool>(
+                                                  "pool", 1, source_block_size, source_num_blocks));
 
     std::shared_ptr<BlockMemoryPool> visualizer_allocator =
-        make_resource<BlockMemoryPool>(
-            "allocator", 1, source_block_size, source_num_blocks);
+        make_resource<BlockMemoryPool>("allocator", 1, source_block_size, source_num_blocks);
     auto visualizer = make_operator<ops::HolovizOp>("holoviz",
-        from_config("holoviz"),
-        Arg("width") = width,
-        Arg("height") = height,
-        Arg("enable_render_buffer_input") = false,
-        Arg("enable_render_buffer_output") = false,
-        Arg("allocator") = visualizer_allocator);
+                                                    from_config("holoviz"),
+                                                    Arg("width") = width,
+                                                    Arg("height") = height,
+                                                    Arg("enable_render_buffer_input") = false,
+                                                    Arg("enable_render_buffer_output") = false,
+                                                    Arg("allocator") = visualizer_allocator);
 
-    add_flow(bitstream_reader, video_decoder_request,
-        {{"output_transmitter", "input_frame"}});
-    add_flow(video_decoder_response, decoder_output_format_converter,
-        {{"output_transmitter", "source_video"}});
-    add_flow(decoder_output_format_converter, visualizer,
-        {{"tensor", "receivers"}});
+    add_flow(bitstream_reader, convert_op, {{"output_transmitter", "input"}});
+    add_flow(convert_op, video_decoder_request, {{"output", "input_frame"}});
+    add_flow(video_decoder_response,
+             decoder_output_format_converter,
+             {{"output_transmitter", "source_video"}});
+    add_flow(decoder_output_format_converter, visualizer, {{"tensor", "receivers"}});
   }
 
  private:
@@ -159,15 +199,10 @@ class App : public holoscan::Application {
 };
 
 /** Helper function to parse the command line arguments */
-bool parse_arguments(int argc, char** argv, std::string& config_name,
-    std::string& data_path) {
-  static struct option long_options[] = {
-      {"data",    required_argument, 0,  'd' },
-      {0,         0,                 0,  0 }
-  };
+bool parse_arguments(int argc, char** argv, std::string& config_name, std::string& data_path) {
+  static struct option long_options[] = {{"data", required_argument, 0, 'd'}, {0, 0, 0, 0}};
 
-  while (int c = getopt_long(argc, argv, "d",
-                   long_options, NULL))  {
+  while (int c = getopt_long(argc, argv, "d", long_options, NULL)) {
     if (c == -1 || c == '?') break;
 
     switch (c) {
@@ -180,9 +215,7 @@ bool parse_arguments(int argc, char** argv, std::string& config_name,
     }
   }
 
-  if (optind < argc) {
-    config_name = argv[optind++];
-  }
+  if (optind < argc) { config_name = argv[optind++]; }
   return true;
 }
 
@@ -193,9 +226,7 @@ int main(int argc, char** argv) {
   // Parse the arguments
   std::string data_path = "";
   std::string config_name = "";
-  if (!parse_arguments(argc, argv, config_name, data_path)) {
-    return 1;
-  }
+  if (!parse_arguments(argc, argv, config_name, data_path)) { return 1; }
 
   if (config_name != "") {
     app->config(config_name);
@@ -206,6 +237,10 @@ int main(int argc, char** argv) {
   }
 
   if (data_path != "") app->set_datapath(data_path);
+
+  app->scheduler(app->make_scheduler<holoscan::MultiThreadScheduler>(
+      "multithread-scheduler", app->from_config("scheduler")));
+
   app->run();
 
   return 0;
