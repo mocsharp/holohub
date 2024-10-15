@@ -1,66 +1,14 @@
-#ifndef GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_GRPC_SERVER_OPS_HPP
-#define GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_GRPC_SERVER_OPS_HPP
-
-#include <memory>
-#include <queue>
-
-#include <grpcpp/grpcpp.h>
+#ifndef GRPC_SERVER_REQUEST_HPP
+#define GRPC_SERVER_REQUEST_HPP
 
 #include <holoscan.pb.h>
-#include <tensor_proto.hpp>
-
-#include "entity_server.hpp"
-#include "resource_queue.hpp"
-
-using holoscan::entity::EntityRequest;
-using holoscan::entity::EntityResponse;
+#include <entity_server.hpp>
 
 using grpc::Server;
 using grpc::ServerBuilder;
 
-namespace holohub::grpc_h264_endoscopy_tool_tracking {
-
-class GrpcServerResponseOp : public holoscan::Operator {
- public:
-  HOLOSCAN_OPERATOR_FORWARD_ARGS(GrpcServerResponseOp)
-  GrpcServerResponseOp() = default;
-
-  void setup(OperatorSpec& spec) override {
-    spec.input<nvidia::gxf::Entity>("system");
-    spec.input<nvidia::gxf::Entity>("device");
-
-    spec.param(device_to_system_tensors_,
-               "device_to_system_tensors",
-               "Device Memory to System Memory",
-               "Copies tensors from device memory to sytem memory.");
-    spec.param(response_queue_, "response_queue", "Response Queue", "Outgoing gRPC results.");
-  }
-
-  void compute(InputContext& op_input, OutputContext& op_output,
-               ExecutionContext& context) override {
-    auto tensors = 0;
-    auto response = std::make_shared<EntityResponse>();
-
-    auto maybe_system_message = op_input.receive<holoscan::gxf::Entity>("system");
-    if (maybe_system_message) {
-      holoscan::ops::TensorProto::tensor_to_entity_response(maybe_system_message.value(), response);
-      tensors++;
-    }
-
-    auto maybe_device_message = op_input.receive<holoscan::gxf::Entity>("device");
-    if (maybe_device_message) {
-      holoscan::ops::TensorProto::tensor_to_entity_response(maybe_device_message.value(), response);
-      tensors++;
-    }
-
-    if (tensors > 0) { response_queue_->push(response); }
-  }
-
- private:
-  Parameter<std::vector<std::string>> device_to_system_tensors_;
-  Parameter<std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>>>
-      response_queue_;
-};
+namespace holoscan::ops {
+using namespace holoscan::ops;
 
 class GrpcServerRequestOp : public holoscan::Operator {
  public:
@@ -140,6 +88,6 @@ class GrpcServerRequestOp : public holoscan::Operator {
   std::unique_ptr<Server> server_;
 };
 
-}  // namespace holohub::grpc_h264_endoscopy_tool_tracking
+}  // namespace holoscan::ops
 
-#endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_GRPC_SERVER_OPS_HPP */
+#endif /* GRPC_SERVER_REQUEST_HPP */

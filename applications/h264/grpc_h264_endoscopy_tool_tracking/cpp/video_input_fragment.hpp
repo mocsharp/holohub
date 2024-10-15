@@ -23,13 +23,15 @@
 #include <holoscan/operators/gxf_codelet/gxf_codelet.hpp>
 #include <holoscan/operators/holoviz/holoviz.hpp>
 
+#include <grpc_client_request.hpp>
+#include <grpc_client_response.hpp>
+
 #include "app_base.hpp"
-#include "entity_client.hpp"
-#include "grpc_client_ops.hpp"
 #include "gxf_imports.hpp"
 
 namespace holohub::grpc_h264_endoscopy_tool_tracking {
 using namespace holoscan;
+using namespace holoscan::ops;
 
 class VideoInputFragment : public holoscan::Fragment {
  private:
@@ -71,8 +73,7 @@ class VideoInputFragment : public holoscan::Fragment {
                                              from_config("video_decoder_request"),
                                              request_condition,
                                              Arg("async_scheduling_term") = request_condition,
-                                             Arg("videodecoder_context") =
-                                             video_decoder_context);
+                                             Arg("videodecoder_context") = video_decoder_context);
 
     auto video_decoder_response = make_operator<VideoDecoderResponseOp>(
         "video_decoder_response",

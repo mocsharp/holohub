@@ -24,13 +24,7 @@ add_executable(grpc_h264_endoscopy_tool_tracking
   app_base.hpp
   app_cloud.hpp
   app_edge.hpp
-  CMakeLists.txt
-  entity_client.hpp
-  entity_server.hpp
-  grpc_client_ops.hpp
-  grpc_server_ops.hpp
   gxf_imports.hpp
-  resource_queue.hpp
   video_input_fragment.hpp
   viz_fragment.hpp
 )

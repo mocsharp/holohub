@@ -1,56 +1,16 @@
-#ifndef GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_GRPC_CLIENT_OPS_HPP
-#define GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_GRPC_CLIENT_OPS_HPP
-
-#include <memory>
-#include <queue>
+#ifndef GRPC_CLIENT_REQUEST_HPP
+#define GRPC_CLIENT_REQUEST_HPP
 
 #include <holoscan.pb.h>
 
+#include "asynchronous_condition_queue.hpp"
+#include "conditional_variable_queue.hpp"
 #include "entity_client.hpp"
-#include "resource_queue.hpp"
 
-namespace holohub::grpc_h264_endoscopy_tool_tracking {
+using holoscan::entity::EntityRequest;
+using holoscan::entity::EntityResponse;
 
-class GrpcClientResponseOp : public holoscan::Operator {
- public:
-  HOLOSCAN_OPERATOR_FORWARD_ARGS(GrpcClientResponseOp)
-
-  GrpcClientResponseOp() = default;
-
-  void start() override { condition_->event_state(AsynchronousEventState::EVENT_WAITING); }
-
-  void stop() override { condition_->event_state(AsynchronousEventState::EVENT_NEVER); }
-
-  void initialize() override {
-    if (condition_.has_value()) { add_arg(condition_.get()); }
-    Operator::initialize();
-  }
-
-  void setup(OperatorSpec& spec) override {
-    spec.param(response_queue_, "response_queue", "Response Queue", "Outgoing gRPC responses.");
-    spec.param(allocator_, "allocator", "Allocator", "Output Allocator");
-    spec.param(condition_, "condition", "Asynchronous Condition", "Asynchronous Condition");
-
-    spec.output<holoscan::gxf::Entity>("output");
-  }
-
-  void compute(InputContext& op_input, OutputContext& op_output,
-               ExecutionContext& context) override {
-    std::shared_ptr<nvidia::gxf::Entity> response = response_queue_->pop();
-
-    if (response) {
-      auto result = nvidia::gxf::Entity(std::move(*response));
-      op_output.emit(result, "output");
-      condition_->event_state(AsynchronousEventState::EVENT_WAITING);
-    }
-  }
-
- private:
-  Parameter<std::shared_ptr<AsynchronousCondition>> condition_;
-  Parameter<std::shared_ptr<AsynchronousConditionQueue<std::shared_ptr<nvidia::gxf::Entity>>>>
-      response_queue_;
-  Parameter<std::shared_ptr<Allocator>> allocator_;
-};
+namespace holoscan::ops {
 
 class GrpcClientRequestOp : public holoscan::Operator {
  public:
@@ -108,6 +68,5 @@ class GrpcClientRequestOp : public holoscan::Operator {
   std::shared_ptr<EntityClient> entity_client_;
   std::thread streaming_thread_;
 };
-
-}  // namespace holohub::grpc_h264_endoscopy_tool_tracking
-#endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_GRPC_CLIENT_OPS_HPP */
+}  // namespace holoscan::ops
+#endif /* GRPC_CLIENT_REQUEST_HPP */

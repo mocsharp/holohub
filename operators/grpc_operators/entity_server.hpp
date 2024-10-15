@@ -25,11 +25,10 @@
 #include <random>
 #include <string>
 
-#include <tensor_proto.hpp>
-
+#include "tensor_proto.hpp"
 #include "holoscan.grpc.pb.h"
 #include "holoscan.pb.h"
-#include "resource_queue.hpp"
+#include "conditional_variable_queue.hpp"
 
 using grpc::CallbackServerContext;
 using grpc::Server;
@@ -39,7 +38,7 @@ using holoscan::entity::Entity;
 using holoscan::entity::EntityRequest;
 using holoscan::entity::EntityResponse;
 
-namespace holohub::grpc_h264_endoscopy_tool_tracking {
+namespace holoscan::ops {
 
 class HoloscanEntityServiceImpl final : public Entity::CallbackService {
  public:

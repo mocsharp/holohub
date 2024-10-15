@@ -26,8 +26,10 @@
 #include <holoscan/operators/format_converter/format_converter.hpp>
 #include <holoscan/operators/holoviz/holoviz.hpp>
 
-#include "grpc_server_ops.hpp"
-#include "resource_queue.hpp"
+#include <grpc_server_request.hpp>
+#include <grpc_server_response.hpp>
+#include <asynchronous_condition_queue.hpp>
+#include <conditional_variable_queue.hpp>
 
 using holoscan::entity::EntityResponse;
 

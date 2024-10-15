@@ -35,8 +35,14 @@ grpc_generate_cpp(CORE_GRPC_SRCS CORE_GRPC_HDRS INCLUDE_DIRS ${CORE_PROTO_FILES}
 add_library(grpc_operators SHARED
   ${CORE_GRPC_HDRS}
   ${CORE_GRPC_SRCS}
+  asynchronous_condition_queue.hpp
+  conditional_variable_queue.hpp
   tensor_proto.cpp
   tensor_proto.hpp
+  grpc_client_request.hpp
+  grpc_client_response.hpp
+  entity_client.hpp
+  entity_server.hpp
 )
 
 target_link_libraries(grpc_operators

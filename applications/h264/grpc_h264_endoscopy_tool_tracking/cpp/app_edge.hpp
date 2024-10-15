@@ -20,7 +20,6 @@
 
 #include <holoscan/holoscan.hpp>
 #include "app_base.hpp"
-#include "resource_queue.hpp"
 #include "video_input_fragment.hpp"
 #include "viz_fragment.hpp"
 

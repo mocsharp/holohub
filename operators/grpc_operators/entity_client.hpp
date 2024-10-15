@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_ENTITY_CLIENT_HPP
-#define GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_ENTITY_CLIENT_HPP
+#ifndef ENTITY_CLIENT_HPP
+#define ENTITY_CLIENT_HPP
 
 #include <chrono>
 #include <thread>
@@ -24,10 +24,11 @@
 #include <fmt/format.h>
 #include <grpcpp/grpcpp.h>
 #include <gxf/std/tensor.hpp>
-#include <tensor_proto.hpp>
 
 #include "holoscan.grpc.pb.h"
-#include "resource_queue.hpp"
+#include "tensor_proto.hpp"
+#include "asynchronous_condition_queue.hpp"
+#include "conditional_variable_queue.hpp"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -36,7 +37,8 @@ using holoscan::entity::Entity;
 using holoscan::entity::EntityRequest;
 using holoscan::entity::EntityResponse;
 
-namespace holohub::grpc_h264_endoscopy_tool_tracking {
+namespace holoscan::ops {
+using namespace holoscan::ops;
 
 class EntityClient {
  public:
@@ -46,7 +48,8 @@ class EntityClient {
   explicit EntityClient(
       const std::string& server_address,
       std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityRequest>>> request_queue,
-      std::shared_ptr<AsynchronousConditionQueue<std::shared_ptr<nvidia::gxf::Entity>>> response_queue)
+      std::shared_ptr<AsynchronousConditionQueue<std::shared_ptr<nvidia::gxf::Entity>>>
+          response_queue)
       : request_queue_(request_queue), response_queue_(response_queue) {
     channel_ = grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
     if (auto status = channel_->GetState(false); status == GRPC_CHANNEL_TRANSIENT_FAILURE) {
@@ -138,6 +141,6 @@ class EntityClient {
   std::unique_ptr<Entity::Stub> stub_;
   EntityStreamInternal* reactor_;
 };
-}  // namespace holohub::grpc_h264_endoscopy_tool_tracking
+}  // namespace holoscan::ops
 
-#endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_ENTITY_CLIENT_HPP */
+#endif /* ENTITY_CLIENT_HPP */
