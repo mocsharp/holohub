@@ -11,13 +11,12 @@ class GrpcServerResponseOp : public holoscan::Operator {
   GrpcServerResponseOp() = default;
 
   void setup(OperatorSpec& spec) override {
-    spec.input<nvidia::gxf::Entity>("system");
-    spec.input<nvidia::gxf::Entity>("device");
+    spec.input<nvidia::gxf::Entity>("input", IOSpec::kAnySize);
 
     spec.param(device_to_system_tensors_,
                "device_to_system_tensors",
                "Device Memory to System Memory",
-               "Copies tensors from device memory to sytem memory.");
+               "Copies tensors from device memory to system memory.");
     spec.param(response_queue_, "response_queue", "Response Queue", "Outgoing gRPC results.");
   }
 
@@ -26,19 +25,17 @@ class GrpcServerResponseOp : public holoscan::Operator {
     auto tensors = 0;
     auto response = std::make_shared<EntityResponse>();
 
-    auto maybe_system_message = op_input.receive<holoscan::gxf::Entity>("system");
-    if (maybe_system_message) {
-      holoscan::ops::TensorProto::tensor_to_entity_response(maybe_system_message.value(), response);
+    auto input_messages = op_input.receive<std::vector<holoscan::gxf::Entity>>("input").value();
+
+    for (auto&& message : input_messages) {
+      holoscan::ops::TensorProto::tensor_to_entity_response(message, response);
       tensors++;
     }
 
-    auto maybe_device_message = op_input.receive<holoscan::gxf::Entity>("device");
-    if (maybe_device_message) {
-      holoscan::ops::TensorProto::tensor_to_entity_response(maybe_device_message.value(), response);
-      tensors++;
+    if (tensors > 0) {
+      HOLOSCAN_LOG_INFO("Sending response with {} tensors.", tensors);
+      response_queue_->push(response);
     }
-
-    if (tensors > 0) { response_queue_->push(response); }
   }
 
  private:

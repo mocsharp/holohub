@@ -116,7 +116,7 @@ class AppCloud : public AppBase {
     add_flow(lstm_inferer, tool_tracking_postprocessor, {{"tensor", "in"}});
     add_flow(tool_tracking_postprocessor,
              grpc_response,
-             {{"out_coords", "system"}, {"out_mask", "device"}});
+             {{"out_coords", "input"}, {"out_mask", "input"}});
   }
 
  private:

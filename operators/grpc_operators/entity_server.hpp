@@ -68,7 +68,7 @@ class HoloscanEntityServiceImpl final : public Entity::CallbackService {
 
       void OnWriteDone(bool ok) override {
         if (!ok) { HOLOSCAN_LOG_WARN("grpc: write failed, error writing response"); }
-          write_mutext_.unlock();
+        write_mutext_.unlock();
       }
 
       void OnReadDone(bool ok) override {
@@ -119,6 +119,6 @@ class HoloscanEntityServiceImpl final : public Entity::CallbackService {
   std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>> response_queue_;
   on_new_request_received_callback request_cb_;
 };
-}  // namespace holohub::grpc_h264_endoscopy_tool_tracking
+}  // namespace holoscan::ops
 
 #endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_ENTITY_SERVER_HPP */

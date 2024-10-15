@@ -4,6 +4,8 @@
 #include <holoscan.pb.h>
 
 namespace holoscan::ops {
+using namespace std;
+
 class GrpcClientResponseOp : public holoscan::Operator {
  public:
   HOLOSCAN_OPERATOR_FORWARD_ARGS(GrpcClientResponseOp)

@@ -36,19 +36,13 @@ class AppEdge : public AppBase {
     auto width = 854;
     auto height = 480;
 
-    auto video_in = make_fragment<VideoInputFragment>(
-        "video_in", datapath_);
+    auto video_in = make_fragment<VideoInputFragment>("video_in", datapath_);
     auto viz = make_fragment<VizFragment>("viz", width, height);
 
     add_flow(video_in,
              viz,
              {{"decoder_output_format_converter.tensor", "visualizer_op.receivers"},
               {"incoming_responses.output", "visualizer_op.receivers"}});
-
-    using namespace std::chrono_literals;
-
-    std::this_thread::sleep_for(500ms);
-
   }
 };
 }  // namespace holohub::grpc_h264_endoscopy_tool_tracking

@@ -79,7 +79,7 @@ class EntityClient {
     ~EntityStreamInternal() { writer_thread_.join(); }
 
     void OnWriteDone(bool ok) override {
-      if (!ok) { HOLOSCAN_LOG_WARN("grpc: write failed, error trasnmitting request"); }
+      if (!ok) { HOLOSCAN_LOG_WARN("grpc: write failed, error transmitting request"); }
       write_mutext_.unlock();
     }
 
