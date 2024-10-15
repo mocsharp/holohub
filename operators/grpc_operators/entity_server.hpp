@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_ENTITY_SERVER_HPP
-#define GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_ENTITY_SERVER_HPP
+#ifndef ENTITY_SERVER_HPP
+#define ENTITY_SERVER_HPP
 
 #include <fmt/format.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
@@ -121,4 +121,4 @@ class HoloscanEntityServiceImpl final : public Entity::CallbackService {
 };
 }  // namespace holoscan::ops
 
-#endif /* GRPC_H264_ENDOSCOPY_TOOL_TRACKING_CPP_ENTITY_SERVER_HPP */
+#endif /* ENTITY_SERVER_HPP */

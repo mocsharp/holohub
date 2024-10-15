@@ -24,6 +24,7 @@
 
 namespace holoscan::ops {
 
+#ifndef CUDA_TRY
 #define CUDA_TRY(stmt)                                                                          \
   ({                                                                                            \
     cudaError_t _holoscan_cuda_err = stmt;                                                      \
@@ -37,6 +38,7 @@ namespace holoscan::ops {
     }                                                                                           \
     _holoscan_cuda_err;                                                                         \
   })
+#endif
 
 void TensorProto::gxf_time_to_proto(const nvidia::gxf::Entity& gxf_entity,
                                     ::holoscan::entity::Timestamp* timestamp) {

@@ -1,10 +1,11 @@
-// Copyright 2015 gRPC authors.
+// SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights
+// reserved. SPDX-License-Identifier: Apache-2.0
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +20,6 @@ package holoscan.entity;
 service Entity {
   rpc Entity (EntityRequest) returns (EntityResponse) {}
   rpc EntityStream (stream EntityRequest) returns (stream EntityResponse) {}
-
 }
 
 message EntityRequest {
@@ -34,7 +34,6 @@ message EntityResponse {
   map<string, string> parameters = 2;
   map<string, Tensor> tensors = 3;
 }
-
 
 message Timestamp {
   // The timestamp in nanoseconds at which the message was published into the system.
