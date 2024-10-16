@@ -21,18 +21,17 @@ extensions:
   - libgxf_videoencoderio.so
   - ../../../../gxf_extensions/lstm_tensor_rt_inference/libgxf_lstm_tensor_rt_inference.so
 
+grpc_server:
+  rpc_call_timeout: 5
+
+grpc_client:
+  rpc_call_timeout: 5
+
 scheduler:
   check_recession_period_ms: 0
   worker_thread_number: 8
   stop_on_deadlock: true
   stop_on_deadlock_timeout: 10000
-
-replayer:
-  basename: "surgical_video"
-  frame_rate: 0   # as specified in timestamps
-  repeat: true    # default: false
-  realtime: true  # default: true
-  count: 0        # default: 0 (no frame count restriction)
 
 bitstream_reader:
   outbuf_storage_type: 0
@@ -51,12 +50,6 @@ decoder_output_format_converter:
 rgb_float_format_converter:
   out_tensor_name: rgb_float_format_converter_out
   in_dtype: "rgb888"
-  out_dtype: "float32"
-  scale_min: 0.0
-  scale_max: 255.0
-
-format_converter_replayer:
-  out_tensor_name: source_video
   out_dtype: "float32"
   scale_min: 0.0
   scale_max: 255.0
@@ -94,10 +87,6 @@ lstm_inference:
   enable_fp16_: true
 
 tool_tracking_postprocessor:
-
-grpc_server_response:
-  device_to_system_tensors:
-  - mask
 
 holoviz:
   tensors:

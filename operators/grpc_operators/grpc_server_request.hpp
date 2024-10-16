@@ -51,6 +51,11 @@ class GrpcServerRequestOp : public holoscan::Operator {
     spec.param(request_queue_, "request_queue", "Request Queue", "Incoming gRPC requests.");
     spec.param(response_queue_, "response_queue", "Response Queue", "Outgoing gRPC responses.");
     spec.param(allocator_, "allocator", "Allocator", "Output Allocator");
+    spec.param(rpc_call_timeout_,
+               "rpc_call_timeout",
+               "RPC Call timeout",
+               "Timeout in seconds for the gRPC server to issue a Finish command if no data is"
+               "is transmitted or received.");
 
     spec.output<holoscan::gxf::Entity>("output");
   }
@@ -84,7 +89,8 @@ class GrpcServerRequestOp : public holoscan::Operator {
             auto entity = std::make_shared<nvidia::gxf::Entity>(out_message.value());
             return entity;
           }
-        });
+        },
+        rpc_call_timeout_.get());
     grpc::EnableDefaultHealthCheckService(true);
     grpc::reflection::InitProtoReflectionServerBuilderPlugin();
     ServerBuilder builder;
@@ -101,6 +107,8 @@ class GrpcServerRequestOp : public holoscan::Operator {
       response_queue_;
   Parameter<std::shared_ptr<Allocator>> allocator_;
   Parameter<std::string> server_address_;
+  Parameter<uint32_t> rpc_call_timeout_;
+
   std::thread server_thread_;
   std::unique_ptr<Server> server_;
 };

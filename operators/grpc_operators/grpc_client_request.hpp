@@ -48,6 +48,11 @@ class GrpcClientRequestOp : public holoscan::Operator {
     spec.param(request_queue_, "request_queue", "Request Queue", "Outgoing gRPC requests.");
     spec.param(response_queue_, "response_queue", "Response Queue", "Incoming gRPC responses.");
     spec.param(allocator_, "allocator", "Allocator", "Output Allocator");
+    spec.param(rpc_call_timeout_,
+               "rpc_call_timeout",
+               "RPC Call timeout",
+               "Timeout in seconds for gRPC client to issue a Done command if no data"
+               "is transmitted or received.");
   }
 
   void compute(InputContext& op_input, OutputContext& op_output,
@@ -75,13 +80,16 @@ class GrpcClientRequestOp : public holoscan::Operator {
               response, out_message.value(), gxf_allocator.value());
           auto entity = std::make_shared<nvidia::gxf::Entity>(out_message.value());
           return entity;
-        });
+        },
+        rpc_call_timeout_.get());
   }
 
   Parameter<std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityRequest>>>> request_queue_;
   Parameter<std::shared_ptr<AsynchronousConditionQueue<std::shared_ptr<nvidia::gxf::Entity>>>>
       response_queue_;
   Parameter<std::shared_ptr<Allocator>> allocator_;
+  Parameter<uint32_t> rpc_call_timeout_;
+
   std::shared_ptr<EntityClient> entity_client_;
   std::thread streaming_thread_;
 };

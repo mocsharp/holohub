@@ -974,7 +974,7 @@
                 },
                 {
                     "name": "HOLOSCAN_LOG_LEVEL",
-                    "value": "DEBUG"
+                    "value": "INFO"
                 }
             ],
             "stopAtEntry": false,

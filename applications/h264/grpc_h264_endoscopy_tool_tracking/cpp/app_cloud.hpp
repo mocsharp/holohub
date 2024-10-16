@@ -26,10 +26,10 @@
 #include <holoscan/operators/format_converter/format_converter.hpp>
 #include <holoscan/operators/holoviz/holoviz.hpp>
 
-#include <grpc_server_request.hpp>
-#include <grpc_server_response.hpp>
 #include <asynchronous_condition_queue.hpp>
 #include <conditional_variable_queue.hpp>
+#include <grpc_server_request.hpp>
+#include <grpc_server_response.hpp>
 
 using holoscan::entity::EntityResponse;
 
@@ -54,7 +54,8 @@ class AppCloud : public AppBase {
                                           Arg("recess_period") = std::string("60hz")),
         Arg("request_queue") = request_queue_,
         Arg("response_queue") = response_queue_,
-        Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
+        Arg("allocator") = make_resource<UnboundedAllocator>("pool"),
+        from_config("grpc_server"));
 
     auto response_condition = make_condition<AsynchronousCondition>("response_condition");
     auto video_decoder_context = make_resource<VideoDecoderContext>(
@@ -102,7 +103,6 @@ class AppCloud : public AppBase {
 
     auto grpc_response =
         make_operator<GrpcServerResponseOp>("grpc_response",
-                                            from_config("grpc_server_response"),
                                             Arg("response_queue") = response_queue_);
 
     add_flow(grpc_request_op, video_decoder_request, {{"output", "input_frame"}});

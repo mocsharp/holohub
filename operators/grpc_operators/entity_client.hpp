@@ -25,10 +25,10 @@
 #include <grpcpp/grpcpp.h>
 #include <gxf/std/tensor.hpp>
 
-#include "holoscan.grpc.pb.h"
-#include "tensor_proto.hpp"
 #include "asynchronous_condition_queue.hpp"
 #include "conditional_variable_queue.hpp"
+#include "holoscan.grpc.pb.h"
+#include "tensor_proto.hpp"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -59,15 +59,18 @@ class EntityClient {
     stub_ = Entity::NewStub(channel_);
   }
 
-  void EndoscopyToolTracking(on_new_response_available_callback&& response_cb) {
-    new EntityStreamInternal(this, response_cb);
+  void EndoscopyToolTracking(on_new_response_available_callback&& response_cb,
+                             uint32_t rpc_timeout) {
+    new EntityStreamInternal(this, response_cb, rpc_timeout);
   }
 
  private:
   class EntityStreamInternal : public grpc::ClientBidiReactor<EntityRequest, EntityResponse> {
    public:
-    EntityStreamInternal(EntityClient* client, on_new_response_available_callback& response_cb)
-        : client_(client), response_cb_(response_cb) {
+    EntityStreamInternal(EntityClient* client, on_new_response_available_callback& response_cb,
+                         uint32_t rpc_timeout)
+        : client_(client), response_cb_(response_cb), rpc_timeout_(rpc_timeout) {
+      last_network_activity_ = std::chrono::time_point<std::chrono::system_clock>::min();
       client_->stub_->async()->EntityStream(&context_, this);
       // AddHold();
       StartCall();
@@ -79,26 +82,28 @@ class EntityClient {
     ~EntityStreamInternal() { writer_thread_.join(); }
 
     void OnWriteDone(bool ok) override {
-      if (!ok) { HOLOSCAN_LOG_WARN("grpc: write failed, error transmitting request"); }
+      last_network_activity_ = std::chrono::high_resolution_clock::now();
+      if (!ok) { HOLOSCAN_LOG_WARN("grpc client: write failed, error transmitting request"); }
       write_mutext_.unlock();
     }
 
     void OnReadDone(bool ok) override {
+      last_network_activity_ = std::chrono::high_resolution_clock::now();
       if (ok) {
         auto entity = response_cb_(response_);
 
         client_->response_queue_->push(entity);
-        HOLOSCAN_LOG_INFO("grpc: Response received and queued for display");
+        HOLOSCAN_LOG_INFO("grpc client: Response received and queued for display");
         Read();
       }
     }
 
     void OnDone(const grpc::Status& status) override {
       if (!status.ok()) {
-        HOLOSCAN_LOG_ERROR("grpc: call failed: {}", status.error_message());
+        HOLOSCAN_LOG_ERROR("grpc client: call failed: {}", status.error_message());
         return;
       }
-      HOLOSCAN_LOG_DEBUG("grpc client: client streaming complete");
+      HOLOSCAN_LOG_INFO("grpc client: client streaming complete");
       delete this;
     }
 
@@ -115,12 +120,27 @@ class EntityClient {
         request = client_->request_queue_->pop();
         request->set_service("endoscopy_tool_tracking");
         StartWrite(&*request);
-        HOLOSCAN_LOG_INFO("grpc: Sending request to server");
+        HOLOSCAN_LOG_INFO("grpc client: Sending request to server");
       }
     }
 
     void ProcessOutgoingQueue() {
-      while (true) { Write(); }
+      while (true) {
+        if (network_timed_out()) {
+          HOLOSCAN_LOG_INFO("grpc client: Connection timed out, closing connection");
+          StartWritesDone();
+          break;
+        }
+        Write();
+      }
+    }
+
+    bool network_timed_out() {
+      if (last_network_activity_ == std::chrono::time_point<std::chrono::system_clock>::min())
+        return false;
+      auto end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(end - last_network_activity_);
+      return elapsed.count() > rpc_timeout_;
     }
 
     EntityClient* client_;
@@ -132,6 +152,8 @@ class EntityClient {
     std::mutex write_mutext_;
     std::condition_variable request_cv_;
     std::thread writer_thread_;
+    uint32_t rpc_timeout_;
+    std::chrono::time_point<std::chrono::system_clock> last_network_activity_;
   };
 
   std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityRequest>>> request_queue_;

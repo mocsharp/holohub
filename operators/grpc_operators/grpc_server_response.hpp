@@ -30,10 +30,6 @@ class GrpcServerResponseOp : public holoscan::Operator {
   void setup(OperatorSpec& spec) override {
     spec.input<nvidia::gxf::Entity>("input", IOSpec::kAnySize);
 
-    spec.param(device_to_system_tensors_,
-               "device_to_system_tensors",
-               "Device Memory to System Memory",
-               "Copies tensors from device memory to system memory.");
     spec.param(response_queue_, "response_queue", "Response Queue", "Outgoing gRPC results.");
   }
 
@@ -56,7 +52,6 @@ class GrpcServerResponseOp : public holoscan::Operator {
   }
 
  private:
-  Parameter<std::vector<std::string>> device_to_system_tensors_;
   Parameter<std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>>>
       response_queue_;
 };

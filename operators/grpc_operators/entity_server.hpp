@@ -25,10 +25,10 @@
 #include <random>
 #include <string>
 
-#include "tensor_proto.hpp"
+#include "conditional_variable_queue.hpp"
 #include "holoscan.grpc.pb.h"
 #include "holoscan.pb.h"
-#include "conditional_variable_queue.hpp"
+#include "tensor_proto.hpp"
 
 using grpc::CallbackServerContext;
 using grpc::Server;
@@ -45,11 +45,14 @@ class HoloscanEntityServiceImpl final : public Entity::CallbackService {
   using on_new_request_received_callback =
       std::function<std::shared_ptr<nvidia::gxf::Entity>(EntityRequest& request)>;
 
-  explicit HoloscanEntityServiceImpl(
+  HoloscanEntityServiceImpl(
       std::shared_ptr<ConditionVariableQueue<std::shared_ptr<nvidia::gxf::Entity>>> request_queue,
       std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>> response_queue,
-      on_new_request_received_callback&& request_cb)
-      : request_queue_(request_queue), response_queue_(response_queue), request_cb_(request_cb) {
+      on_new_request_received_callback&& request_cb, uint32_t rpc_timeout)
+      : request_queue_(request_queue),
+        response_queue_(response_queue),
+        request_cb_(request_cb),
+        rpc_timeout_(rpc_timeout) {
     auto x = 1;
   }
 
@@ -58,6 +61,7 @@ class HoloscanEntityServiceImpl final : public Entity::CallbackService {
     class EntityStreamInternal : public grpc::ServerBidiReactor<EntityRequest, EntityResponse> {
      public:
       EntityStreamInternal(HoloscanEntityServiceImpl* server) : server_(server) {
+        last_network_activity_ = std::chrono::time_point<std::chrono::system_clock>::min();
         Read();
         writer_thread_ = std::thread(&EntityStreamInternal::ProcessOutgoingQueue, this);
       }
@@ -67,21 +71,23 @@ class HoloscanEntityServiceImpl final : public Entity::CallbackService {
       }
 
       void OnWriteDone(bool ok) override {
-        if (!ok) { HOLOSCAN_LOG_WARN("grpc: write failed, error writing response"); }
+        last_network_activity_ = std::chrono::high_resolution_clock::now();
+        if (!ok) { HOLOSCAN_LOG_WARN("grpc server: write failed, error writing response"); }
         write_mutext_.unlock();
       }
 
       void OnReadDone(bool ok) override {
+        last_network_activity_ = std::chrono::high_resolution_clock::now();
         if (ok) {
           auto entity = server_->request_cb_(request_);
           server_->request_queue_->push(entity);
-          HOLOSCAN_LOG_INFO("grpc: Request received and queued for processing");
+          HOLOSCAN_LOG_INFO("grpc server: Request received and queued for processing");
           Read();
         }
       }
 
       void OnDone() override {
-        HOLOSCAN_LOG_DEBUG("grpc server: server streaming complete");
+        HOLOSCAN_LOG_INFO("grpc server: server streaming complete");
         delete this;
       }
 
@@ -96,15 +102,32 @@ class HoloscanEntityServiceImpl final : public Entity::CallbackService {
           std::shared_ptr<EntityResponse> response;
           response = server_->response_queue_->pop();
           StartWrite(&*response);
-          HOLOSCAN_LOG_INFO("grpc: Sending response to client");
+          HOLOSCAN_LOG_INFO("grpc server: Sending response to client");
         }
       }
       void ProcessOutgoingQueue() {
-        while (true) { Write(); }
+        while (true) {
+          if (processing_timed_out()) {
+            HOLOSCAN_LOG_INFO("grpc server: sending finish event");
+            Finish(grpc::Status::OK);
+            break;
+          }
+          Write();
+        }
+      }
+
+      bool processing_timed_out() {
+        if (last_network_activity_ == std::chrono::time_point<std::chrono::system_clock>::min())
+          return false;
+        auto end = std::chrono::high_resolution_clock::now();
+        auto elapsed =
+            std::chrono::duration_cast<std::chrono::seconds>(end - last_network_activity_);
+        return elapsed.count() > server_->rpc_timeout_;
       }
 
       HoloscanEntityServiceImpl* server_;
       EntityRequest request_;
+      std::chrono::time_point<std::chrono::system_clock> last_network_activity_;
 
       std::mutex read_mutext_;
       std::mutex write_mutext_;
@@ -118,6 +141,7 @@ class HoloscanEntityServiceImpl final : public Entity::CallbackService {
   std::shared_ptr<ConditionVariableQueue<std::shared_ptr<nvidia::gxf::Entity>>> request_queue_;
   std::shared_ptr<ConditionVariableQueue<std::shared_ptr<EntityResponse>>> response_queue_;
   on_new_request_received_callback request_cb_;
+  uint32_t rpc_timeout_;
 };
 }  // namespace holoscan::ops
 

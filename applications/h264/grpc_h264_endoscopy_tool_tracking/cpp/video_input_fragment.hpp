@@ -61,7 +61,8 @@ class VideoInputFragment : public holoscan::Fragment {
         "outgoing_requests",
         Arg("request_queue") = request_queue_,
         Arg("response_queue") = response_queue_,
-        Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
+        Arg("allocator") = make_resource<UnboundedAllocator>("pool"),
+        from_config("grpc_client"));
 
     auto response_condition = make_condition<AsynchronousCondition>("response_condition");
     auto video_decoder_context = make_resource<VideoDecoderContext>(
