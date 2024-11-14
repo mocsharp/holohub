@@ -49,12 +49,14 @@ class AsynchronousConditionQueue : public Resource {
     if (data_available_condition_->event_state() == AsynchronousEventState::EVENT_WAITING) {
       data_available_condition_->event_state(AsynchronousEventState::EVENT_DONE);
     }
+    HOLOSCAN_LOG_DEBUG("Items queued+: {}", queue_.size());
   }
 
   DataT pop() {
     if (empty()) { return nullptr; }
     auto item = queue_.front();
     queue_.pop();
+    HOLOSCAN_LOG_DEBUG("Items queued-: {}", queue_.size());
     return item;
   }
 

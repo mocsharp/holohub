@@ -930,7 +930,7 @@
                 },
                 {
                     "name": "HOLOSCAN_LOG_LEVEL",
-                    "value": "INFO"
+                    "value": "DEBUG"
                 }
             ],
             "stopAtEntry": false,
@@ -963,7 +963,7 @@
                 },
                 {
                     "name": "HOLOSCAN_LOG_LEVEL",
-                    "value": "INFO"
+                    "value": "DEBUG"
                 }
             ],
             "stopAtEntry": false,

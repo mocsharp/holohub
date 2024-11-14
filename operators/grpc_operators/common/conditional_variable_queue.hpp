@@ -47,6 +47,7 @@ class ConditionVariableQueue : public Resource {
     std::lock_guard<std::mutex> lock(response_available_mutex_);
     queue_.push(value);
     data_available_condition_.notify_one();
+    HOLOSCAN_LOG_DEBUG("Items queued+: {}", queue_.size());
   }
 
   DataT pop() {
@@ -54,6 +55,7 @@ class ConditionVariableQueue : public Resource {
     data_available_condition_.wait(lock, [this]() { return !queue_.empty(); });
     auto item = queue_.front();
     queue_.pop();
+    HOLOSCAN_LOG_DEBUG("Items queued-: {}", queue_.size());
     return item;
   }
 

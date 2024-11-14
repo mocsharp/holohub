@@ -29,7 +29,7 @@ replayer:
   basename: "surgical_video"
   frame_rate: 0   # as specified in timestamps
   repeat: false   # default: false
-  realtime: true # default: true
+  realtime: false # default: true
   count: 0        # default: 0 (no frame count restriction)
 
 format_converter:
