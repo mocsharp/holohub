@@ -23,13 +23,13 @@ application:
   inputFormats: []
   outputFormats: ["screen"]
   multifragment: false # default: false, true to run in multi-fragment mode, false otherwise
-  benchmarking: false # default: false, true to enable Data Flow Benchmarking, false otherwise
+  benchmarking: true # default: false, true to enable Data Flow Benchmarking, false otherwise
 
 replayer:
   basename: "surgical_video"
   frame_rate: 0   # as specified in timestamps
   repeat: false   # default: false
-  realtime: false # default: true
+  realtime: true # default: true
   count: 0        # default: 0 (no frame count restriction)
 
 format_converter:
@@ -42,7 +42,7 @@ grpc_server:
   rpc_timeout: 5
 
 grpc_client:
-  server_address: localhost:50051
+  server_address: 10.0.0.2:50051
   rpc_timeout: 5
   interrupt: true
 

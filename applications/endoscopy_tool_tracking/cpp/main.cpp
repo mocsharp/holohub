@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights
+ * reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -349,8 +349,9 @@ int main(int argc, char** argv) {
 
   HOLOSCAN_LOG_INFO("Using input data from {}", data_directory);
   app->set_datapath(data_directory);
-
+  auto tracker = &app->track();
   app->run();
 
+  tracker->print();
   return 0;
 }

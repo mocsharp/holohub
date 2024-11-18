@@ -40,7 +40,6 @@ class VideoInputFragment : public holoscan::Fragment {
 
     auto replayer = make_operator<ops::VideoStreamReplayerOp>(
         "replayer",
-        Arg("allocator", make_resource<RMMAllocator>("video_replayer_allocator")),
         from_config("replayer"),
         args);
 
@@ -118,8 +117,7 @@ class VizFragment : public holoscan::Fragment {
         from_config("holoviz"),
         Arg("width") = width_,
         Arg("height") = height_,
-        Arg("allocator") = visualizer_allocator,
-        Arg("cuda_stream_pool") = make_resource<CudaStreamPool>("cuda_stream", 0, 0, 0, 1, 5));
+        Arg("allocator") = visualizer_allocator);
     add_operator(visualizer_operator);
   }
 };
@@ -207,7 +205,13 @@ int main(int argc, char** argv) {
   auto app = holoscan::make_application<App>();
   app->config(config_path);
   app->set_datapath(data_directory);
+  auto trackers = app->track_distributed();
+
   app->run();
 
+  for (const auto& [name, tracker] : trackers) {
+    std::cout << "Fragment: " << name << std::endl;
+    tracker->print();
+  }
   return 0;
 }
