@@ -25,6 +25,12 @@ application:
   multifragment: false # default: false, true to run in multi-fragment mode, false otherwise
   benchmarking: false # default: false, true to enable Data Flow Benchmarking, false otherwise
 
+resources:
+  cpu: 1
+  gpu: 1
+  memory: 1Gi
+  gpuMemory: 1Gi
+  
 replayer:
   basename: "surgical_video"
   frame_rate: 0   # as specified in timestamps
