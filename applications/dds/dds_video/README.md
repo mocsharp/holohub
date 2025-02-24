@@ -53,7 +53,7 @@ up to, and including, step 5 (Installing Java and setting JREHOME).
 To build the application, the `RTI_CONNEXT_DDS_DIR` CMake variable must point to
 the installation path for RTI Connext. This can be done automatically by setting
 the `NDDSHOME` environment variable to the RTI Connext installation directory
-(such as when using the RTI `setenv` scripts), or manually at build time, e.g.:
+(such as when using the RTI `rtienv` scripts), or manually at build time, e.g.:
 
 ```sh
 $ ./run build dds_video --configure-args -DRTI_CONNEXT_DDS_DIR=~/rti/rti_connext_dds-7.3.0
@@ -66,7 +66,7 @@ install RTI Connext into a development container. Instead, Connext should be
 installed onto the host as above and then the development container can be
 launched with the RTI Connext folder mounted at runtime. To do so, ensure that
 the `NDDSHOME` and `CONNEXTDDS_ARCH` environment variables are set (which can be
-done using the RTI `setenv` script) and use the following:
+done using the RTI `rtienv` script) and use the following:
 
 ```sh
 # 1. Build the container
