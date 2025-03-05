@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_holohub_operator(dds_shapes_subscriber)
-add_subdirectory(hid)
-add_subdirectory(video)
+add_holohub_operator(dds_hid_publisher)
+add_holohub_operator(dds_hid_subscriber)
+add_holohub_operator(hid_renderer)
 
-# Needs to be last
-if(BUILD_dds_operator_base)
-  add_subdirectory(base)
+# Build the DDS generated type library
+if(OP_dds_hid_publisher OR OP_dds_hid_subscriber)
+  include(RTIConnextDDS)
+  add_rti_type_library(dds_hid_command ${CMAKE_CURRENT_SOURCE_DIR}/InputCommand.idl UNBOUNDED)
 endif()
+

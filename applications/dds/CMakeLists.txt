@@ -21,3 +21,10 @@ add_holohub_application(dds_video DEPENDS
                         OPERATORS dds_shapes_subscriber
                                   dds_video_publisher
                                   dds_video_subscriber)
+
+add_holohub_application(telesurgery DEPENDS
+                        OPERATORS dds_hid_publisher
+                                dds_hid_subscriber
+                                dds_video_publisher
+                                dds_video_subscriber
+                                hid_renderer)

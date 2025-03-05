@@ -302,6 +302,12 @@ get_conditional_options() {
         conditional_opt+="${prefix}--group-add=${render_id}${postfix}"
     fi
 
+    # add user in container to group input to access input devices, e.g. /dev/input/event0
+    input_id=$(get_group_id input)
+    if [ -n "$input_id" ]; then
+        conditional_opt+="${prefix}--group-add=${input_id}${postfix}"
+    fi
+
     # Add docker group to enable DooD
     conditional_opt+="${prefix}--group-add=$(get_group_id docker)${postfix}"
 

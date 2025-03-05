@@ -298,6 +298,63 @@
             }
         },
         //#endregion cvcuda_basic
+
+
+        //#region telesurgery
+        {
+            "name": "(gdb) telesurgery/cpp surgeon",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build telesurgery (delay 3s)",
+            "program": "${workspaceFolder}/build/telesurgery/applications/dds/telesurgery/telesurgery",
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/telesurgery/applications/dds/telesurgery",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "args": [
+                "-s"
+            ],
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "telesurgery",
+                "order": 1
+            }
+        },
+        {
+            "name": "(gdb) telesurgery/cpp robot",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "Build telesurgery",
+            "program": "${workspaceFolder}/build/telesurgery/applications/dds/telesurgery/telesurgery",
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/telesurgery/applications/dds/telesurgery",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "args": [
+                "-r"
+            ],
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "telesurgery",
+                "order": 2
+            }
+        },
+        //#endregion telesurgery
+
         //#region endoscopy_depth_estimation
         {
             "name": "(debugpy) endoscopy_depth_estimation/python",
@@ -1401,6 +1458,20 @@
                 "hidden": false,
                 "group": "grpc_h264_endoscopy_tool_tracking",
                 "order": 13
+            }
+        },
+        {
+            "name": "(compound) telesurgery/cpp (surgeon & robot)",
+            "configurations": [
+                "(gdb) telesurgery/cpp surgeon",
+                "(gdb) telesurgery/cpp robot"
+            ],
+            "preLaunchTask": "Build telesurgery",
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "telesurgery",
+                "order": 11
             }
         },
     ],

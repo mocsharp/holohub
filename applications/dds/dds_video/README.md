@@ -70,7 +70,7 @@ done using the RTI `setenv` script) and use the following:
 
 ```sh
 # 1. Build the container
-./dev_container build --docker_file applications/dds/dds_video/Dockerfile
+./dev_container build --docker_file applications/dds/Dockerfile
 # 2. Launch the container
 ./dev_container launch --docker_opts "-v $HOME/rti_connext_dds-7.3.0:/opt/rti.com/rti_connext_dds-7.3.0/"
 # 3. Build the application

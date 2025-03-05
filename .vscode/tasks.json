@@ -172,6 +172,44 @@
         },
         {
             "type": "shell",
+            "label": "Build telesurgery",
+            "command": "./run",
+            "args": [
+                "build",
+                "telesurgery",
+                "--type",
+                "debug",
+            ],
+            "options": {
+                "cwd": "${env:WORKSPACE_DIR}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "CMake template build task"
+        },
+        {
+            "type": "shell",
+            "label": "Build telesurgery (delay 3s)",
+            "command": "sleep 3",
+            "options": {
+                "cwd": "${env:WORKSPACE_DIR}"
+            },
+            "dependsOn": "Build telesurgery",
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "CMake template build task",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": true,
+                "panel": "dedicated",
+                "showReuseMessage": false,
+                "clear": true,
+                "group": "telesurgery"
+            }
+        },
+        {
+            "type": "shell",
             "label": "Build endoscopy_depth_estimation",
             "command": "./run",
             "args": [

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_holohub_operator(dds_shapes_subscriber)
-add_subdirectory(hid)
-add_subdirectory(video)
+include(pybind11_add_holohub_module)
 
-# Needs to be last
-if(BUILD_dds_operator_base)
-  add_subdirectory(base)
-endif()
+pybind11_add_holohub_module(
+    CPP_CMAKE_TARGET hid_renderer
+    CLASS_NAME "HIDRendererOp"
+    SOURCES hid_renderer.cpp
+)
