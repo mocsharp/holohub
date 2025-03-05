@@ -58,7 +58,9 @@ void DDSHIDSubscriberOp::initialize() {
   HOLOSCAN_LOG_INFO("Device filters: {}", device_filter_string);
 
   dds::topic::ContentFilteredTopic<InputCommand> filtered_topic(
-      topic, "FilteredInputCommand", dds::topic::Filter("device_path MATCH %0", {device_filter_string}));
+      topic,
+      "FilteredInputCommand",
+      dds::topic::Filter("device_path MATCH %0", {device_filter_string}));
 
   // Create the reader for the InputCommand
   reader_ = dds::sub::DataReader<InputCommand>(
@@ -94,9 +96,7 @@ void DDSHIDSubscriberOp::compute(InputContext& op_input, OutputContext& op_outpu
 
         // Filter valid commands
         for (size_t i = 0; i < commands.length(); i++) {
-          if (commands[i].info().valid()) { 
-            valid_commands.push_back(commands[i].data());
-          }
+          if (commands[i].info().valid()) { valid_commands.push_back(commands[i].data()); }
         }
       }
     }

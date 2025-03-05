@@ -38,8 +38,6 @@
 
 namespace holoscan::ops {
 
-
-
 /**
  * @brief Operator class to publish a hid stream to DDS.
  */
@@ -65,11 +63,13 @@ class DDSHIDPublisherOp : public DDSOperatorBase {
 
   uint32_t frame_num_ = 0;
 
-  std::map<std::string, HIDDevice> device_file_descriptors_; // Sanitized device paths to file descriptors
-  std::queue<std::tuple<HIDDevice, std::variant<js_event, input_event>>> event_buffer_;  // Buffer for storing events
-  std::thread event_thread_;  // Thread for reading events
-  std::atomic<bool> running_;  // Flag to control the running state of the thread
-  std::mutex buffer_mutex_;  // Mutex for synchronizing access to the event buffer
+  std::map<std::string, HIDDevice>
+      device_file_descriptors_;  // Sanitized device paths to file descriptors
+  std::queue<std::tuple<HIDDevice, std::variant<js_event, input_event>>>
+      event_buffer_;                   // Buffer for storing events
+  std::thread event_thread_;           // Thread for reading events
+  std::atomic<bool> running_;          // Flag to control the running state of the thread
+  std::mutex buffer_mutex_;            // Mutex for synchronizing access to the event buffer
   std::condition_variable buffer_cv_;  // Condition variable for buffer synchronization
 };
 

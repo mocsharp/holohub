@@ -64,7 +64,7 @@ void HIDRendererOp::initialize() {
 }
 
 void HIDRendererOp::compute(InputContext& op_input, OutputContext& op_output,
-                               ExecutionContext& context) {
+                            ExecutionContext& context) {
   auto entity = gxf::Entity::New(&context);
   auto specs = std::vector<HolovizOp::InputSpec>();
 
@@ -161,7 +161,7 @@ void HIDRendererOp::process_commands(const std::vector<InputCommand> commands) {
 }
 
 void HIDRendererOp::update_tensors_specs(ExecutionContext& context, gxf::Entity& entity,
-                                            std::vector<HolovizOp::InputSpec>& specs) {
+                                         std::vector<HolovizOp::InputSpec>& specs) {
   int32_t priority = 0;
   for (const auto& [tensor_name, tensor_location] : tensor_locations_) {
     auto& tensor = std::get<0>(tensor_location);
@@ -230,8 +230,8 @@ void HIDRendererOp::update_tensors_specs(ExecutionContext& context, gxf::Entity&
 
 template <std::size_t N, std::size_t C>
 void HIDRendererOp::add_data(gxf::Entity& entity, const char* name,
-                                const std::array<std::array<float, C>, N>& data,
-                                ExecutionContext& context) {
+                             const std::array<std::array<float, C>, N>& data,
+                             ExecutionContext& context) {
   // Get Handle to underlying nvidia::gxf::Allocator from std::shared_ptr<holoscan::Allocator>
   auto allocator =
       nvidia::gxf::Handle<nvidia::gxf::Allocator>::Create(context.context(), allocator_->gxf_cid());
@@ -244,11 +244,11 @@ void HIDRendererOp::add_data(gxf::Entity& entity, const char* name,
   std::memcpy(tensor->pointer(), data.data(), N * C * sizeof(float));
 }
 
-void HIDRendererOp::add_dynamic_text(std::vector<HolovizOp::InputSpec>& specs,
-                                        gxf::Entity& entity, ExecutionContext& context,
-                                        const int32_t priority, const std::string& tensor_name,
-                                        const std::string& text, const std::vector<float> color,
-                                        const std::array<std::array<float, 2UL>, 1UL>& offset) {
+void HIDRendererOp::add_dynamic_text(std::vector<HolovizOp::InputSpec>& specs, gxf::Entity& entity,
+                                     ExecutionContext& context, const int32_t priority,
+                                     const std::string& tensor_name, const std::string& text,
+                                     const std::vector<float> color,
+                                     const std::array<std::array<float, 2UL>, 1UL>& offset) {
   HolovizOp::InputSpec spec;
   spec.tensor_name_ = tensor_name + "_text";
   spec.type_ = HolovizOp::InputType::TEXT;

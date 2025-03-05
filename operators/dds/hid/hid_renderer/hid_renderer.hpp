@@ -18,7 +18,6 @@
 #ifndef HID_DDS_HID_SUBSCRIBER_HID_RENDERER_HPP
 #define HID_DDS_HID_SUBSCRIBER_HID_RENDERER_HPP
 
-
 #include <array>
 #include <map>
 #include <string>
@@ -80,7 +79,6 @@ class HIDRendererOp : public Operator {
   bool caps_lock_active_;
 };
 
-}  // namespace holoscan::ops 
-
+}  // namespace holoscan::ops
 
 #endif /* HID_DDS_HID_SUBSCRIBER_HID_RENDERER_HPP */
