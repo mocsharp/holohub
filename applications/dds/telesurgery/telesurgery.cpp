@@ -49,6 +49,8 @@ class RobotApp : public holoscan::Application {
     // Render on Holoviz
     auto holoviz = make_operator<ops::HolovizOp>(
         "holoviz", Arg("allocator") = allocator, from_config("robot.holoviz"));
+
+    add_flow(video_capture, holoviz, {{"signal", "receivers"}});
     add_flow(hid_subscriber, hid_renderer, {{"output", "input"}});
     add_flow(hid_renderer, holoviz, {{"outputs", "receivers"}, {"output_specs", "input_specs"}});
 
@@ -56,7 +58,6 @@ class RobotApp : public holoscan::Application {
     auto video_publisher = make_operator<ops::DDSVideoPublisherOp>(
         "video_publisher", from_config("robot.video_publisher"));
 
-    add_flow(video_capture, holoviz, {{"signal", "receivers"}});
     add_flow(holoviz, video_publisher, {{"render_buffer_output", "input"}});
   }
 };
@@ -156,11 +157,15 @@ int main(int argc, char** argv) {
     HOLOSCAN_LOG_INFO("Starting surgeon app with config {}", config_path);
     auto app = holoscan::make_application<SurgeonApp>();
     app->config(config_path);
+    app->scheduler(app->make_scheduler<holoscan::EventBasedScheduler>(
+      "scheduler", app->from_config("surgeon.scheduler")));
     app->run();
   } else if (robot) {
     HOLOSCAN_LOG_INFO("Starting robot app with config {}", config_path);
     auto app = holoscan::make_application<RobotApp>();
     app->config(config_path);
+    app->scheduler(app->make_scheduler<holoscan::MultiThreadScheduler>(
+      "scheduler", app->from_config("robot.scheduler")));
     app->run();
   }
 

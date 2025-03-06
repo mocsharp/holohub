@@ -24,6 +24,11 @@ application:
 
 # App: Surgeon
 surgeon:
+  scheduler:
+    check_recession_period_ms: 0
+    worker_thread_number: 2
+    stop_on_deadlock: true
+    stop_on_deadlock_timeout: 500
   video:
     domain_id: 0
     stream_id: 0
@@ -54,6 +59,11 @@ surgeon:
         type: mouse
 
 robot:
+  scheduler:
+    check_recession_period_ms: 0
+    worker_thread_number: 5
+    stop_on_deadlock: true
+    stop_on_deadlock_timeout: 500
   video:
     width: 1024
     height: 576
