@@ -65,41 +65,15 @@ void DDSHIDSubscriberOp::initialize() {
   // Create the reader for the InputCommand
   reader_ = dds::sub::DataReader<InputCommand>(
       subscriber, filtered_topic, qos_provider_.datareader_qos(reader_qos_.get()));
-
-  // Obtain the reader's status condition
-  status_condition_ = dds::core::cond::StatusCondition(reader_);
-
-  // Enable the 'data available' status
-  status_condition_.enabled_statuses(dds::core::status::StatusMask::data_available());
-
-  // Attach the status condition to the waitset
-  waitset_ += status_condition_;
 }
 
 void DDSHIDSubscriberOp::compute(InputContext& op_input, OutputContext& op_output,
                                  ExecutionContext& context) {
-  // Configure the wait timeout parameter
-  const auto wait_timeout = dds::core::Duration::from_millisecs(100);
-
-  // Wait for new data with timeout
-  dds::core::cond::WaitSet::ConditionSeq active_conditions = waitset_.wait(wait_timeout);
+  dds::sub::LoanedSamples<InputCommand> commands = reader_.take();
 
   std::vector<InputCommand> valid_commands;
-  for (const auto& cond : active_conditions) {
-    if (cond == status_condition_) {
-      // Take all available commands at once
-      dds::sub::LoanedSamples<InputCommand> commands = reader_.take();
-
-      if (commands.length() > 0) {
-        // Create a vector to store valid commands
-        valid_commands.reserve(commands.length());
-
-        // Filter valid commands
-        for (size_t i = 0; i < commands.length(); i++) {
-          if (commands[i].info().valid()) { valid_commands.push_back(commands[i].data()); }
-        }
-      }
-    }
+  for (const auto& command : commands) {
+    if (command.info().valid()) { valid_commands.push_back(command.data()); }
   }
 
   op_output.emit(valid_commands, "output");

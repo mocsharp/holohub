@@ -74,6 +74,11 @@ class HIDRendererOp : public Operator {
   std::string user_text_;
   float zoom_level_ = 1.0f;
 
+  // Track the last joystick value for each axis
+  // Key: tensor name
+  // Value: last joystick x value, x step size, y value, y step size
+  std::map<std::string, std::array<float, 4>> last_joystick_values_;
+
   // Track modifier key states
   bool shift_pressed_;
   bool caps_lock_active_;

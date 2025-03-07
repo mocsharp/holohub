@@ -39,8 +39,11 @@ class RobotApp : public holoscan::Application {
         "video_capture", Arg("allocator") = allocator, from_config("robot.video"));
 
     // Subscribe to HID events
-    auto hid_subscriber =
-        make_operator<ops::DDSHIDSubscriberOp>("hid_subscriber", from_config("robot.hid"));
+    auto hid_subscriber = make_operator<ops::DDSHIDSubscriberOp>(
+        "hid_subscriber",
+        make_condition<PeriodicCondition>("periodic-condition",
+                                          Arg("recess_period") = std::string("60hz")),
+        from_config("robot.hid"));
 
     // HID Renderer
     auto hid_renderer = make_operator<ops::HIDRendererOp>(
@@ -158,14 +161,14 @@ int main(int argc, char** argv) {
     auto app = holoscan::make_application<SurgeonApp>();
     app->config(config_path);
     app->scheduler(app->make_scheduler<holoscan::EventBasedScheduler>(
-      "scheduler", app->from_config("surgeon.scheduler")));
+        "scheduler", app->from_config("surgeon.scheduler")));
     app->run();
   } else if (robot) {
     HOLOSCAN_LOG_INFO("Starting robot app with config {}", config_path);
     auto app = holoscan::make_application<RobotApp>();
     app->config(config_path);
     app->scheduler(app->make_scheduler<holoscan::MultiThreadScheduler>(
-      "scheduler", app->from_config("robot.scheduler")));
+        "scheduler", app->from_config("robot.scheduler")));
     app->run();
   }
 

@@ -43,8 +43,6 @@ class DDSHIDSubscriberOp : public DDSOperatorBase {
   Parameter<std::vector<std::string>> hid_device_filters_;
 
   dds::sub::DataReader<InputCommand> reader_ = dds::core::null;
-  dds::core::cond::StatusCondition status_condition_ = dds::core::null;
-  dds::core::cond::WaitSet waitset_;
 };
 
 }  // namespace holoscan::ops

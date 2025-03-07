@@ -69,10 +69,11 @@ void HIDRendererOp::compute(InputContext& op_input, OutputContext& op_output,
   auto specs = std::vector<HolovizOp::InputSpec>();
 
   // Get the input commands from the DDSHIDSubscriber.
-  auto commands = op_input.receive<std::vector<InputCommand>>("input").value();
-  process_commands(commands);
-  update_tensors_specs(context, entity, specs);
+  auto commands = op_input.receive<std::vector<InputCommand>>("input");
 
+  if (commands) { process_commands(commands.value()); }
+
+  update_tensors_specs(context, entity, specs);
   // Output to Holoviz.
   op_output.emit(entity, "outputs");
   op_output.emit(specs, "output_specs");
@@ -83,8 +84,10 @@ void HIDRendererOp::process_commands(const std::vector<InputCommand> commands) {
     const auto tensor_name = command.device_name();
     auto& location = std::get<1>(tensor_locations_[tensor_name]);
     if (command.device_type() == HIDDeviceType::JOYSTICK) {
+      if (last_joystick_values_.find(tensor_name) == last_joystick_values_.end()) {
+        last_joystick_values_[tensor_name] = std::array<float, 4>{0.0f, 1.0f, 0.0f, 1.0f};
+      }
       auto value = command.value() / 32767.0f;  // Normalize joystick input to [-1, 1]
-
       // Calculate step size in actual pixels
       // Default for D-pad
       float x_step = 1.0f;
@@ -103,9 +106,13 @@ void HIDRendererOp::process_commands(const std::vector<InputCommand> commands) {
       if (command.number() == 0 || command.number() == 2 || command.number() == 8)  // x-axis
       {
         location = {location[0] + std::round(value * x_step), location[1]};
+        last_joystick_values_[tensor_name][0] = value;
+        last_joystick_values_[tensor_name][1] = x_step;
       } else if (command.number() == 1 || command.number() == 5 || command.number() == 9)  // y-axis
       {
         location = {location[0], location[1] + std::round(value * y_step)};
+        last_joystick_values_[tensor_name][2] = value;
+        last_joystick_values_[tensor_name][3] = y_step;
       }
     } else if (command.device_type() == HIDDeviceType::KEYBOARD) {
       // Handle modifier keys first
@@ -153,6 +160,23 @@ void HIDRendererOp::process_commands(const std::vector<InputCommand> commands) {
         float scroll_speed = 1.0f;  // Adjust this value based on your needs
         zoom_level_ = zoom_level_ + command.value() * scroll_speed;
       }
+    }
+    // Clamp values to the canvas size
+    location[0] = std::clamp(location[0], 0.0f, static_cast<float>(width_.get()));
+    location[1] = std::clamp(location[1], 0.0f, static_cast<float>(height_.get()));
+  }
+
+  for (const auto& [tensor_name, last_joystick_values] : last_joystick_values_) {
+    auto& location = std::get<1>(tensor_locations_[tensor_name]);
+    if (std::get<0>(last_joystick_values) != 0.0f) {
+      location = {location[0] + std::round(std::get<0>(last_joystick_values) *
+                                           std::get<1>(last_joystick_values)),
+                  location[1]};
+    }
+    if (std::get<2>(last_joystick_values) != 0.0f) {
+      location = {location[0],
+                  location[1] + std::round(std::get<2>(last_joystick_values) *
+                                           std::get<3>(last_joystick_values))};
     }
     // Clamp values to the canvas size
     location[0] = std::clamp(location[0], 0.0f, static_cast<float>(width_.get()));

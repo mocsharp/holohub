@@ -55,7 +55,7 @@ surgeon:
         path: /dev/input/event4
         type: keyboard
       - name: mouse1
-        path: /dev/input/event6
+        path: /dev/input/event5
         type: mouse
 
 robot:
@@ -75,7 +75,7 @@ robot:
     hid_device_filters:
       - /dev/input/js0
       - /dev/input/event4
-      - /dev/input/event6
+      - /dev/input/event5
   holoviz:
     window_title: "Telesurgery - Robot"
     width: 1024
