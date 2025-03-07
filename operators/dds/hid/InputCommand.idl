@@ -18,8 +18,7 @@ const string INPUT_COMMAND_TOPIC = "InputCommand";
 enum HIDDeviceType { JOYSTICK, KEYBOARD, MOUSE };
 
 struct InputCommand {
-  @key string device_path;
-  string device_name;
+  @key string device_name;
   HIDDeviceType device_type;
   uint8 event_type;
   uint8 number;

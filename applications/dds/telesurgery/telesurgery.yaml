@@ -73,9 +73,9 @@ robot:
     participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
     reader_qos: "HoloscanDDSDataFlow::Command"
     hid_device_filters:
-      - /dev/input/js0
-      - /dev/input/event4
-      - /dev/input/event5
+      - joystick1
+      - keyboard1
+      - mouse1
   holoviz:
     window_title: "Telesurgery - Robot"
     width: 1024

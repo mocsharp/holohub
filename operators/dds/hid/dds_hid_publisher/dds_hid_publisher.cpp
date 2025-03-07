@@ -108,7 +108,6 @@ void DDSHIDPublisherOp::compute(InputContext& op_input, OutputContext& op_output
 
     // Convert event to InputCommand
     InputCommand command;
-    command.device_path(device.path);
     command.device_type(device.type);
     command.device_name(device.name);
 

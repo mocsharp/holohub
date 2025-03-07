@@ -60,7 +60,7 @@ void DDSHIDSubscriberOp::initialize() {
   dds::topic::ContentFilteredTopic<InputCommand> filtered_topic(
       topic,
       "FilteredInputCommand",
-      dds::topic::Filter("device_path MATCH %0", {device_filter_string}));
+      dds::topic::Filter("device_name MATCH %0", {device_filter_string}));
 
   // Create the reader for the InputCommand
   reader_ = dds::sub::DataReader<InputCommand>(
