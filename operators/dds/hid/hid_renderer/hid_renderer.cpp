@@ -207,7 +207,7 @@ void HIDRendererOp::update_tensors_specs(ExecutionContext& context, gxf::Entity&
                        priority++,
                        tensor_name,
                        ss.str(),
-                       {0.0f, 1.0f, 0.0f, 1.0f},
+                       tensor.color_,
                        {{{0.01f, 0.01f}}});
     } else if (tensor.type_ == HolovizOp::InputType::OVALS) {
       add_data<1, 4>(entity, tensor_name.c_str(), {{{norm_x, norm_y, 0.05f, 0.05f}}}, context);
@@ -221,7 +221,7 @@ void HIDRendererOp::update_tensors_specs(ExecutionContext& context, gxf::Entity&
                        priority++,
                        tensor_name,
                        ss.str(),
-                       {0.5f, 0.0f, 1.0f, 1.0f},
+                       tensor.color_,
                        {{{0.01f, 0.05f}}});
     } else if (tensor.type_ == HolovizOp::InputType::TRIANGLES) {
       // Create a triangle centered at the cursor position with size based on zoom level
@@ -246,7 +246,7 @@ void HIDRendererOp::update_tensors_specs(ExecutionContext& context, gxf::Entity&
                        priority++,
                        tensor_name,
                        ss.str(),
-                       {1.0f, 0.0f, 1.0f, 1.0f},
+                       tensor.color_,
                        {{{0.01f, 0.09f}}});
     }
   }

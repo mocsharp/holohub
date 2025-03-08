@@ -93,6 +93,11 @@ The `surgeon` section is used to configure the surgeon application.
 
 ```yaml
 surgeon:
+  scheduler:
+    check_recession_period_ms: 0
+    worker_thread_number: 2
+    stop_on_deadlock: true
+    stop_on_deadlock_timeout: 500
   video:
     domain_id: 0
     stream_id: 0
@@ -119,7 +124,7 @@ surgeon:
         path: /dev/input/event4
         type: keyboard
       - name: mouse1
-        path: /dev/input/event6
+        path: /dev/input/event5
         type: mouse
 ```
 
@@ -131,6 +136,11 @@ The `robot` section is used to configure the robot application.
 
 ```yaml
 robot:
+  scheduler:
+    check_recession_period_ms: 0
+    worker_thread_number: 5
+    stop_on_deadlock: true
+    stop_on_deadlock_timeout: 500
   video:
     width: 1024
     height: 576
@@ -140,9 +150,9 @@ robot:
     participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
     reader_qos: "HoloscanDDSDataFlow::Command"
     hid_device_filters:
-      - /dev/input/js0
-      - /dev/input/event4
-      - /dev/input/event6
+      - joystick1
+      - keyboard1
+      - mouse1
   holoviz:
     window_title: "Telesurgery - Robot"
     width: 1024
@@ -180,6 +190,6 @@ robot:
 
 `video.device` is the path to the V4L2 device to use for the robot's video stream. 
 
-`hid.hid_device_filters` is a list of HID devices to subscribe to. Each HID device is configured with a `path` and `type`. The `path` is the path to the HID device on the system. The `type` is the type of HID device, which can be `joystick`, `keyboard`, or `mouse`.
+`hid.hid_device_filters` is a list of HID devices to subscribe to. Each HID device is configured with the name of the corresponding device from the `surgeon` section.
 
 For each HID device that you want to render, you must add a `holoviz.tensors` entry with the same `name` as the `hid.hid_devices.name` and the `type` (aka shape) you want to render.
