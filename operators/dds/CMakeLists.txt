@@ -16,6 +16,7 @@
 add_holohub_operator(dds_shapes_subscriber)
 add_subdirectory(hid)
 add_subdirectory(video)
+add_subdirectory(camera_info)
 
 # Needs to be last
 if(BUILD_dds_operator_base)

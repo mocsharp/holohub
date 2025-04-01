@@ -298,8 +298,6 @@
             }
         },
         //#endregion cvcuda_basic
-
-
         //#region telesurgery
         {
             "name": "(gdb) telesurgery/cpp surgeon",
@@ -313,6 +311,8 @@
             "MIMode": "gdb",
             "args": [
                 "-s"
+            ],
+            "environment": [
             ],
             "setupCommands": [
                 {
@@ -354,7 +354,6 @@
             }
         },
         //#endregion telesurgery
-
         //#region endoscopy_depth_estimation
         {
             "name": "(debugpy) endoscopy_depth_estimation/python",
@@ -908,7 +907,6 @@
             }
         },
         //#endregion h264_video_decode
-
         //#region ucx_h264_endoscopy_tool_tracking
         {
             "name": "(gdb) ucx_h264_endoscopy_tool_tracking/cpp (all fragments)",
@@ -971,8 +969,6 @@
             }
         },
         //#endregion ucx_h264_endoscopy_tool_tracking
-
-
         //#region grpc_endoscopy_tool_tracking
         {
             "name": "(gdb) grpc_endoscopy_tool_tracking/cpp (edge)",
@@ -1100,12 +1096,12 @@
             "cppConfig": "default (gdb) Attach",
             "presentation": {
                 "hidden": false,
-                "group": "grpc_endoscopy_tool_tracking",,
+                "group": "grpc_endoscopy_tool_tracking",
+                ,
                 "order": 3
             }
         },
         //#endregion grpc_endoscopy_tool_tracking
-
         //#region grpc_h264_endoscopy_tool_tracking
         {
             "name": "(gdb) grpc_h264_endoscopy_tool_tracking/cpp (edge)",
@@ -1174,7 +1170,6 @@
             }
         },
         //#endregion grpc_h264_endoscopy_tool_tracking
-
         //#region holoviz
         {
             "name": "(gdb) Holoviz examples",
@@ -1290,7 +1285,6 @@
             }
         },
         //#endregion holoviz
-
         //#region volume_rendering
         {
             "name": "(gdb) volume_rendering/cpp",

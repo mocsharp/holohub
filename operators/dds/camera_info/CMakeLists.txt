@@ -13,19 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.20)
-project(distributed_applications LANGUAGES NONE)
+add_holohub_operator(dds_camera_info_subscriber)
 
+# Build the DDS generated type library
+if(OP_dds_camera_info_subscriber)
+  include(RTIConnextDDS)
+  add_rti_type_library(dds_camera_info ${CMAKE_CURRENT_SOURCE_DIR}/CameraInfo.idl UNBOUNDED)
+endif()
 
-add_holohub_application(dds_video DEPENDS
-                        OPERATORS dds_shapes_subscriber
-                                  dds_video_publisher
-                                  dds_video_subscriber)
-
-add_holohub_application(telesurgery DEPENDS
-                        OPERATORS dds_hid_publisher
-                                dds_hid_subscriber
-                                dds_video_publisher
-                                dds_video_subscriber
-                                dds_camera_info_subscriber
-                                hid_renderer)

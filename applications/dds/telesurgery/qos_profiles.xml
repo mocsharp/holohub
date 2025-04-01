@@ -28,7 +28,7 @@
                 </participant_name>
                 <!-- Optimizations for the the SHMEM and UDPv4 transports. -->
                 <transport_builtin>
-                    <mask>SHMEM | UDPv4</mask>
+                    <mask>UDPv4</mask>
                     <shmem>
                         <!-- Increase the maximum message size to 4MB to reduce fragmentation.
                              4MB is large enough for a frame up to 720p resolution in a single
@@ -89,6 +89,19 @@
             </datareader_qos>
         </qos_profile>
 
+        <!-- Camera Info Profile - For camera metadata -->
+        <qos_profile name="CameraInfo" base_name="BuiltinQosLib::Generic.BestEffort">
+            <datawriter_qos>
+                <publication_name>
+                    <name>CameraInfoWriter</name>
+                </publication_name>
+            </datawriter_qos>
+            <datareader_qos>
+                <subscription_name>
+                    <name>CameraInfoReader</name>
+                </subscription_name>
+            </datareader_qos>
+        </qos_profile>
     </qos_library>
 
 </dds>

@@ -23,12 +23,6 @@
             "installOhMyZshConfig": true,
             "userUid": 1000,
             "userGid": 1000
-        },
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-            "installZsh": false,
-            "installDockerBuildx": true,
-            "version": "latest",
-            "dockerDashComposeVersion": "v2"
         }
     },
     "runArgs": [

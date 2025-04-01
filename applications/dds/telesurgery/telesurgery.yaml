@@ -26,18 +26,29 @@ application:
 surgeon:
   scheduler:
     check_recession_period_ms: 0
-    worker_thread_number: 2
+    worker_thread_number: 5
     stop_on_deadlock: true
     stop_on_deadlock_timeout: 500
   video:
     domain_id: 0
-    stream_id: 0
     participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
     reader_qos: "HoloscanDDSDataFlow::Video"
+    topic: "robot_camera"
+  room_cam:
+    domain_id: 0
+    participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
+    reader_qos: "HoloscanDDSDataFlow::CameraInfo"
+    topic: "robot_camera"
+  format_converter:
+    in_dtype: "rgb888"
+    out_dtype: "rgb888"
+    in_tensor_name: "room_raw_image"
+    out_tensor_name: "room_converted_image"
   holoviz:
     window_title: "Telesurgery - Surgeon"
-    width: 1024
-    height: 576
+    width: 640
+    framerate: 120
+    height: 480
     tensors:
       - name: ""
         type: color
@@ -51,12 +62,12 @@ surgeon:
       - name: joystick1
         path: /dev/input/js0
         type: joystick
-      - name: keyboard1
-        path: /dev/input/event4
-        type: keyboard
-      - name: mouse1
-        path: /dev/input/event5
-        type: mouse
+      # - name: keyboard1
+      #   path: /dev/input/event4
+      #   type: keyboard
+      # - name: mouse1
+      #   path: /dev/input/event5
+      #   type: mouse
 
 robot:
   scheduler:
@@ -78,8 +89,8 @@ robot:
       - mouse1
   holoviz:
     window_title: "Telesurgery - Robot"
-    width: 1024
-    height: 576
+    width: 640
+    height: 480
     enable_render_buffer_output: true
     tensors:
       - name: ""

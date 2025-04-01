@@ -27,7 +27,31 @@
 #include "dds_video_publisher.hpp"
 #include "dds_video_subscriber.hpp"
 
+#include "CameraInfo.hpp"
+#include "dds_camera_info_subscriber.hpp"
+
 #include <getopt.h>
+
+// class VideoDisplayOp : public holoscan::Operator {
+//  public:
+//   void setup(holoscan::OperatorSpec& spec) override {
+//     spec.input<nvidia::gxf::VideoBuffer>("input");
+//   }
+
+//   void compute(holoscan::InputContext& op_input, holoscan::OutputContext& op_output,
+//                holoscan::ExecutionContext& context) override {
+//     auto maybe_buffer = op_input.receive<nvidia::gxf::VideoBuffer>("input");
+//     if (!maybe_buffer) {
+//       HOLOSCAN_LOG_ERROR("Failed to receive video buffer");
+//       return;
+//     }
+
+//     auto& video_buffer = maybe_buffer.value();
+//     HOLOSCAN_LOG_INFO("Received video frame: {}x{}",
+//                       video_buffer->width(),
+//                       video_buffer->height());
+//   }
+// };
 
 class RobotApp : public holoscan::Application {
  public:
@@ -75,15 +99,29 @@ class SurgeonApp : public holoscan::Application {
         make_operator<ops::DDSHIDPublisherOp>("hid_publisher", from_config("surgeon.hid"));
     add_operator(hid_publisher);
 
-    // Subscribe to the recorded video stream
-    auto video_subscriber = make_operator<ops::DDSVideoSubscriberOp>(
-        "video_subscriber",
-        from_config("surgeon.video"),
-        Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
+    auto room_cam_subscriber = make_operator<ops::DDSCameraInfoSubscriberOp>(
+        "room_cam_subscriber",
+        make_condition<PeriodicCondition>("periodic-condition",
+                                          Arg("recess_period") = std::string("120hz")),
+        Arg("allocator") = make_resource<UnboundedAllocator>("pool"),
+        from_config("surgeon.room_cam"));
 
-    // Render the video stream
-    auto holoviz = make_operator<ops::HolovizOp>("holoviz", from_config("surgeon.holoviz"));
-    add_flow(video_subscriber, holoviz, {{"output", "receivers"}});
+    // Subscribe to the recorded video stream
+    // auto video_subscriber = make_operator<ops::DDSVideoSubscriberOp>(
+    //     "video_subscriber",
+    //     from_config("surgeon.video"),
+    //     Arg("allocator") = make_resource<UnboundedAllocator>("pool"));
+
+    auto holoviz =
+        make_operator<ops::HolovizOp>("holoviz",
+                                      Arg("allocator") = make_resource<UnboundedAllocator>("pool"),
+                                      from_config("surgeon.holoviz"));
+
+    add_flow(room_cam_subscriber,
+             holoviz,
+             {{"video", "receivers"},
+              {"overlay", "receivers"},
+              {"overlay_specs", "input_specs"}});
   }
 };
 
@@ -160,7 +198,7 @@ int main(int argc, char** argv) {
     HOLOSCAN_LOG_INFO("Starting surgeon app with config {}", config_path);
     auto app = holoscan::make_application<SurgeonApp>();
     app->config(config_path);
-    app->scheduler(app->make_scheduler<holoscan::EventBasedScheduler>(
+    app->scheduler(app->make_scheduler<holoscan::MultiThreadScheduler>(
         "scheduler", app->from_config("surgeon.scheduler")));
     app->run();
   } else if (robot) {

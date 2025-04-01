@@ -22,6 +22,7 @@ find_package(holoscan 2.0 REQUIRED CONFIG
 add_executable(telesurgery telesurgery.cpp)
 target_link_libraries(telesurgery
   holoscan::core
+  holoscan::ops::format_converter
   holoscan::ops::holoviz
   holoscan::ops::video_stream_recorder
   holoscan::ops::v4l2
@@ -29,6 +30,7 @@ target_link_libraries(telesurgery
   holoscan::ops::dds_hid_subscriber
   holoscan::ops::dds_video_publisher
   holoscan::ops::dds_video_subscriber
+  holoscan::ops::dds_camera_info_subscriber
   holoscan::ops::hid_renderer
   dds_hid_command
 )
