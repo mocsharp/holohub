@@ -87,7 +87,10 @@ void DDSHIDPublisherOp::start() {
 
         while (read(device.file_descriptor, event_ptr, event_size) > 0) {
           std::lock_guard<std::mutex> lock(buffer_mutex_);
-          event_buffer_.push(std::make_tuple(device, event));
+          // capture timestamp in unix timestamp
+          auto capture_time_epoch =
+              std::chrono::high_resolution_clock::now().time_since_epoch().count();
+          event_buffer_.push(std::make_tuple(device, event, capture_time_epoch));
           buffer_cv_.notify_one();
         }
       }
@@ -103,7 +106,7 @@ void DDSHIDPublisherOp::compute(InputContext& op_input, OutputContext& op_output
 
   // Process and emit buffered events
   while (!event_buffer_.empty()) {
-    auto [device, current_event] = event_buffer_.front();
+    auto [device, current_event, capture_time_epoch] = event_buffer_.front();
     event_buffer_.pop();
 
     // Convert event to InputCommand
@@ -128,8 +131,38 @@ void DDSHIDPublisherOp::compute(InputContext& op_input, OutputContext& op_output
       }
     }
 
+    // Set capture timestamp
+    command.capture_timestamp(capture_time_epoch);
+
+    // Set publish timestamp
+    auto publish_timestamp = std::chrono::high_resolution_clock::now();
+    command.publish_timestamp(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(publish_timestamp.time_since_epoch())
+            .count());
+
+    // Assign a unique message ID
+    command.message_id(next_message_id_);
+
     // Write the InputCommand to the writer
     writer_.write(command);
+    // HOLOSCAN_LOG_INFO("Published InputCommand message with ID: {}", next_message_id_.load());
+    total_messages_sent_++;
+    next_message_id_++;
+  }
+
+  // Check if it's time to print stats
+  auto current_time = std::chrono::steady_clock::now();
+  auto elapsed =
+      std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_stats_time_)
+          .count();
+
+  if (elapsed >= stats_interval_ms_) {
+    HOLOSCAN_LOG_INFO("=== InputCommand Publisher Statistics ===");
+    HOLOSCAN_LOG_INFO("Total InputCommand messages sent: {}", total_messages_sent_.load());
+    HOLOSCAN_LOG_INFO("Next message ID: {}", next_message_id_.load());
+    HOLOSCAN_LOG_INFO("=========================================");
+
+    last_stats_time_ = current_time;
   }
 }
 

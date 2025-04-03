@@ -25,6 +25,8 @@
 #include "CameraInfo.hpp"
 #include "holoscan/core/resources/gxf/allocator.hpp"
 #include <holoscan/operators/holoviz/holoviz.hpp>
+#include <unordered_set>
+#include <chrono>
 
 namespace holoscan::ops {
 
@@ -54,6 +56,49 @@ class DDSCameraInfoSubscriberOp : public DDSOperatorBase {
   dds::sub::DataReader<CameraInfo> reader_ = dds::core::null;
   dds::core::cond::StatusCondition status_condition_ = dds::core::null;
   dds::core::cond::WaitSet waitset_;
+
+  // Message tracking variables
+  uint64_t total_camera_info_messages_received_ = 0;
+  std::unordered_set<uint64_t> message_ids_received_;
+  uint64_t last_message_id_ = 0;
+  uint64_t loss_message_count_ = 0;
+  uint64_t expected_frame_id_ = 0;
+  uint64_t loss_frame_count_ = 0;
+  std::chrono::time_point<std::chrono::steady_clock> last_stats_time_ = std::chrono::steady_clock::now();
+  uint64_t stats_interval_ms_ = 3000; // Print stats every 3 seconds
+
+  // Latency statistics
+  struct LatencyStats {
+    double min = std::numeric_limits<double>::max();
+    double max = 0.0;
+    double sum = 0.0;
+    int count = 0;
+
+    void update(double value) {
+      min = std::min(min, value);
+      max = std::max(max, value);
+      sum += value;
+      count++;
+    }
+
+    double average() const {
+      return count > 0 ? sum / count : 0.0;
+    }
+
+    void reset() {
+      min = std::numeric_limits<double>::max();
+      max = 0.0;
+      sum = 0.0;
+      count = 0;
+    }
+  };
+  
+  LatencyStats capture_to_publish_stats_;
+  LatencyStats publish_to_receive_stats_;
+  LatencyStats receive_to_camera_publish_stats_;
+  LatencyStats camera_publish_to_compute_stats_;
+  LatencyStats end_to_end_latency_stats_;
+  LatencyStats in_app_processing_latency_stats_;
 };
 
 }  // namespace holoscan::ops

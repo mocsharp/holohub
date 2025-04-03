@@ -30,12 +30,12 @@ surgeon:
     stop_on_deadlock: true
     stop_on_deadlock_timeout: 500
   video:
-    domain_id: 0
+    domain_id: 1
     participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
     reader_qos: "HoloscanDDSDataFlow::Video"
     topic: "robot_camera"
   room_cam:
-    domain_id: 0
+    domain_id: 1
     participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
     reader_qos: "HoloscanDDSDataFlow::CameraInfo"
     topic: "robot_camera"
@@ -55,7 +55,7 @@ surgeon:
         opacity: 1.0
         priority: 0
   hid:
-    domain_id: 0
+    domain_id: 1
     participant_qos: HoloscanDDSTransport::SHMEM+LAN
     writer_qos: HoloscanDDSDataFlow::Command
     hid_devices:
@@ -80,7 +80,7 @@ robot:
     height: 576
     device: /dev/video0
   hid:
-    domain_id: 0
+    domain_id: 1
     participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
     reader_qos: "HoloscanDDSDataFlow::Command"
     hid_device_filters:
@@ -116,7 +116,7 @@ robot:
         point_size: 4.0
         priority: 3
   video_publisher:
-    domain_id: 0
+    domain_id: 1
     stream_id: 0
     participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
     writer_qos: "HoloscanDDSDataFlow::Video"

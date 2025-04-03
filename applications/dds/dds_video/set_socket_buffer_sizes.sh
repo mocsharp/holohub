@@ -7,3 +7,5 @@
 #   https://community.rti.com/howto/improve-rti-connext-dds-network-performance-linux-systems
 sudo sysctl -w net.core.rmem_max="4194304"
 sudo sysctl -w net.core.wmem_max="4194304"
+# reload sysctl
+sudo sysctl -p

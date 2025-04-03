@@ -29,23 +29,20 @@
                 <!-- Optimizations for the the SHMEM and UDPv4 transports. -->
                 <transport_builtin>
                     <mask>UDPv4</mask>
-                    <shmem>
-                        <!-- Increase the maximum message size to 4MB to reduce fragmentation.
-                             4MB is large enough for a frame up to 720p resolution in a single
-                             message. This can be reduced if using smaller streams, but
-                             experimentation has shown that using anything larger does not
-                             typically help (even if the frame size exceeds 4MB). -->
-                        <message_size_max>4194304</message_size_max>
-                        <received_message_count_max>10</received_message_count_max>
-                        <!-- message_size_max * received_message_count_max -->
-                        <receive_buffer_size>4194304</receive_buffer_size>
-                    </shmem>
                     <udpv4>
                         <!-- This helps not to lose packets. Run set_socket_buffer_sizes.sh first. -->
                         <send_socket_buffer_size>4194304</send_socket_buffer_size>
                         <recv_socket_buffer_size>4194304</recv_socket_buffer_size>
+                        <!-- Specify allowed interfaces or addresses for communication -->
+                        <!-- Optional: Specify unicast addresses for initial peers -->
+                        <!-- <unicast_enabled>true</unicast_enabled> -->
                     </udpv4>
                 </transport_builtin>
+                <discovery>
+                    <initial_peers>
+                        <element>udpv4://10.137.145.98</element>
+                    </initial_peers>
+                </discovery>
             </domain_participant_qos>
 
             <!-- Discovery-related optimizations -->
@@ -62,7 +59,7 @@
     <qos_library name="HoloscanDDSDataFlow">
 
         <!-- Profile for the Command streaming components -->
-        <qos_profile name="Command" base_name="BuiltinQosLib::Pattern.Streaming">
+        <qos_profile name="Command" base_name="BuiltinQosLibExp::Generic.StrictReliable.LowLatency">
             <datawriter_qos>
                 <publication_name>
                     <name>InputCommandWriter</name>
@@ -81,16 +78,50 @@
                 <publication_name>
                     <name>VideoFrameWriter</name>
                 </publication_name>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                    <!-- Increase reliability max blocking time -->
+                    <max_blocking_time>
+                        <sec>5</sec>
+                        <nanosec>0</nanosec>
+                    </max_blocking_time>
+                </reliability>
+                <history>
+                    <kind>KEEP_ALL_HISTORY_QOS</kind>
+                </history>
+                <!-- Add asynchronous publisher settings -->
+                <publish_mode>
+                    <kind>ASYNCHRONOUS_PUBLISH_MODE_QOS</kind>
+                    <flow_controller_name>DDS_DEFAULT_FLOW_CONTROLLER_NAME</flow_controller_name>
+                </publish_mode>
+                <!-- Adjust resource limits to be consistent with history -->
+                <resource_limits>
+                    <max_samples>128</max_samples>
+                    <max_samples_per_instance>128</max_samples_per_instance>
+                    <initial_samples>128</initial_samples>
+                </resource_limits>
             </datawriter_qos>
             <datareader_qos>
                 <subscription_name>
                     <name>VideoFrameReader</name>
                 </subscription_name>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <history>
+                    <kind>KEEP_ALL_HISTORY_QOS</kind>
+                </history>
+                <!-- Add matching resource limits for the reader -->
+                <resource_limits>
+                    <max_samples>128</max_samples>
+                    <max_samples_per_instance>128</max_samples_per_instance>
+                    <initial_samples>128</initial_samples>
+                </resource_limits>
             </datareader_qos>
         </qos_profile>
 
         <!-- Camera Info Profile - For camera metadata -->
-        <qos_profile name="CameraInfo" base_name="BuiltinQosLib::Generic.BestEffort">
+        <qos_profile name="CameraInfo" base_name="BuiltinQosLibExp::Generic.KeepLastReliable.LargeData">
             <datawriter_qos>
                 <publication_name>
                     <name>CameraInfoWriter</name>
@@ -99,7 +130,7 @@
             <datareader_qos>
                 <subscription_name>
                     <name>CameraInfoReader</name>
-                </subscription_name>
+                </subscription_name>    
             </datareader_qos>
         </qos_profile>
     </qos_library>

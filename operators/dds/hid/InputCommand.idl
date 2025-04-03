@@ -23,4 +23,8 @@ struct InputCommand {
   uint8 event_type;
   uint8 number;
   int16 value;
+  int64 capture_timestamp;  // Timestamp when the event was captured in nanoseconds
+  int64 publish_timestamp;  // Timestamp when the event was published in nanoseconds
+  
+  uint64 message_id;
 };

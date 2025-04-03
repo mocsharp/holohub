@@ -41,6 +41,31 @@
 
 namespace holoscan::ops {
 
+struct LatencyStats {
+  double min = std::numeric_limits<double>::max();
+  double max = 0.0;
+  double sum = 0.0;
+  int count = 0;
+
+  void update(double value) {
+    min = std::min(min, value);
+    max = std::max(max, value);
+    sum += value;
+    count++;
+  }
+
+  double average() const {
+    return count > 0 ? sum / count : 0.0;
+  }
+
+  void reset() {
+    min = std::numeric_limits<double>::max();
+    max = 0.0;
+    sum = 0.0;
+    count = 0;
+  }
+};
+
 void DDSCameraInfoSubscriberOp::setup(OperatorSpec& spec) {
   DDSOperatorBase::setup(spec);
 
@@ -84,10 +109,6 @@ void DDSCameraInfoSubscriberOp::initialize() {
 
 void DDSCameraInfoSubscriberOp::compute(InputContext& op_input, OutputContext& op_output,
                                         ExecutionContext& context) {
-  HOLOSCAN_LOG_INFO("DDSCameraInfoSubscriberOp::compute");
-  // record start time
-  auto start_time = std::chrono::high_resolution_clock::now();
-
   auto allocator =
       nvidia::gxf::Handle<nvidia::gxf::Allocator>::Create(context.context(), allocator_->gxf_cid());
 
@@ -99,34 +120,80 @@ void DDSCameraInfoSubscriberOp::compute(InputContext& op_input, OutputContext& o
   auto overlay_specs = std::vector<HolovizOp::InputSpec>();
 
   bool output_written = false;
-  auto start_time2 = std::chrono::high_resolution_clock::now();
-  // Wait for a new frame
-  // record time for the take call
-  auto start_time_take = std::chrono::high_resolution_clock::now();
   dds::sub::LoanedSamples<CameraInfo> frames = reader_.take();
-  auto end_time_take = std::chrono::high_resolution_clock::now();
-  auto duration_take =
-      std::chrono::duration_cast<std::chrono::microseconds>(end_time_take - start_time_take);
-  HOLOSCAN_LOG_INFO("Time taken to take CameraInfo: {} μs", duration_take.count());
+
+  // Update total message count
+  total_camera_info_messages_received_ += frames.length();
+
 
   // record time between here and first line of loop
-  auto start_time_loop = std::chrono::high_resolution_clock::now();
   for (const auto& frame : frames) {
-    HOLOSCAN_LOG_INFO("Received CameraInfo: {}", frames.length());
-    auto end_time_loop = std::chrono::high_resolution_clock::now();
-    auto duration_loop =
-        std::chrono::duration_cast<std::chrono::microseconds>(end_time_loop - start_time_loop);
-    HOLOSCAN_LOG_INFO("Time taken to loop through frames: {} μs", duration_loop.count());
-
-    // record time to check valid call
-    auto start_time_valid = std::chrono::high_resolution_clock::now();
     if (frame.info().valid()) {
-      auto end_time_valid = std::chrono::high_resolution_clock::now();
-      auto duration_valid =
-          std::chrono::duration_cast<std::chrono::microseconds>(end_time_valid - start_time_valid);
-      HOLOSCAN_LOG_INFO("Time taken to check valid: {} μs", duration_valid.count());
+      // Get current time for latency calculation
+      auto current_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+      // Track message ID
+      uint64_t message_id = frame.data().message_id();
+      message_ids_received_.insert(message_id);
 
-      // record start time
+      if (frame.data().frame_num() != expected_frame_id_) {
+        HOLOSCAN_LOG_WARN("Frame ID out of order: {} (expected {})", frame.data().frame_num(), expected_frame_id_);
+        loss_frame_count_++;
+      }
+
+      expected_frame_id_ = frame.data().frame_num() + 1;
+
+      if (message_id != 0) {
+        if (last_message_id_ == 0) {
+          HOLOSCAN_LOG_INFO("First message ID: {}", message_id);
+        }
+        if (message_id != last_message_id_ + 1) {
+          HOLOSCAN_LOG_WARN("Message ID out of order: {} (expected {})", message_id, last_message_id_ + 1);
+          loss_message_count_++;
+        }
+        last_message_id_ = message_id;
+      }
+
+      // Calculate latencies - only for messages with non-zero message_id
+      if (message_id != 0 && 
+          frame.data().capture_timestamp() > 0 && 
+          frame.data().hid_publish_timestamp() > 0 &&
+          frame.data().receive_timestamp() > 0 &&
+          frame.data().camera_publish_timestamp() > 0) {
+        
+        // 1. Capture to HID publish latency (ms)
+        double capture_to_publish_ms = 
+            (frame.data().hid_publish_timestamp() - frame.data().capture_timestamp()) / 1000000.0;
+        
+        // 2. HID publish to receive latency (ms)
+        double publish_to_receive_ms = 
+            (frame.data().receive_timestamp() - frame.data().hid_publish_timestamp()) / 1000000.0;
+        
+        // 3. Receive to camera publish latency (ms)
+        double receive_to_camera_publish_ms = 
+            (frame.data().camera_publish_timestamp() - frame.data().receive_timestamp()) / 1000000.0;
+        
+        // 4. Camera publish to compute latency (ms)
+        double camera_publish_to_compute_ms = 
+            (current_time_ns - frame.data().camera_publish_timestamp()) / 1000000.0;
+        
+        // 5. Total end-to-end latency (ms)
+        double in_app_processing_latency_ms = capture_to_publish_ms + 
+                                 receive_to_camera_publish_ms ;
+
+        // 6. Total end-to-end latency (ms)
+        double capture_to_compute_ms = 
+            (current_time_ns - frame.data().capture_timestamp()) / 1000000.0;
+
+        // Update latency statistics
+        capture_to_publish_stats_.update(capture_to_publish_ms);
+        publish_to_receive_stats_.update(publish_to_receive_ms);
+        receive_to_camera_publish_stats_.update(receive_to_camera_publish_ms);
+        camera_publish_to_compute_stats_.update(camera_publish_to_compute_ms);
+        in_app_processing_latency_stats_.update(in_app_processing_latency_ms);
+        end_to_end_latency_stats_.update(capture_to_compute_ms);
+      }
+
       auto shape = nvidia::gxf::Shape{
           static_cast<int>(frame.data().height()), static_cast<int>(frame.data().width()), 3};
 
@@ -142,20 +209,11 @@ void DDSCameraInfoSubscriberOp::compute(InputContext& op_input, OutputContext& o
       auto bytes_per_element = nvidia::gxf::PrimitiveTypeSize(type);
       size_t data_size = frame.data().width() * frame.data().height() * 3 * bytes_per_element;
 
-      // record time to copy data to tensor
-      auto start_time_tensor = std::chrono::high_resolution_clock::now();
       // Copy data from frame to tensor
       CUDA_TRY(cudaMemcpy(tensor.value()->pointer(),
                           frame.data().data().data(),
                           data_size,
                           cudaMemcpyHostToDevice));
-
-      // record time to copy data to tensor
-      // calculate and print time elapsed in microseconds
-      auto end_time_tensor = std::chrono::high_resolution_clock::now();
-      auto duration_tensor = std::chrono::duration_cast<std::chrono::microseconds>(
-          end_time_tensor - start_time_tensor);
-      HOLOSCAN_LOG_INFO("Time taken to copy data to tensor: {} μs", duration_tensor.count());
 
       // generte overlay specs
       std::stringstream ss;
@@ -191,6 +249,81 @@ void DDSCameraInfoSubscriberOp::compute(InputContext& op_input, OutputContext& o
     }
   }
 
+  // Check if it's time to print stats
+  auto current_time = std::chrono::steady_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+      current_time - last_stats_time_).count();
+  
+  if (elapsed >= stats_interval_ms_) {
+    HOLOSCAN_LOG_INFO("=== CameraInfo Message Statistics ===");
+    HOLOSCAN_LOG_INFO("Total CameraInfo messages received: {}", total_camera_info_messages_received_);
+    HOLOSCAN_LOG_INFO("Unique message IDs received: {}", message_ids_received_.size());
+    
+    // Print latency statistics
+    if (end_to_end_latency_stats_.count > 0) {
+      HOLOSCAN_LOG_INFO("=== Latency Statistics (ms) ===");
+      
+      HOLOSCAN_LOG_INFO("Capture to HID publish: avg={:.2f}, min={:.2f}, max={:.2f}, count={}",
+                       capture_to_publish_stats_.average(),
+                       capture_to_publish_stats_.min,
+                       capture_to_publish_stats_.max,
+                       capture_to_publish_stats_.count);
+      
+      HOLOSCAN_LOG_INFO("HID publish to receive: avg={:.2f}, min={:.2f}, max={:.2f}, count={}",
+                       publish_to_receive_stats_.average(),
+                       publish_to_receive_stats_.min,
+                       publish_to_receive_stats_.max,
+                       publish_to_receive_stats_.count);
+      
+      HOLOSCAN_LOG_INFO("Receive to camera publish: avg={:.2f}, min={:.2f}, max={:.2f}, count={}",
+                       receive_to_camera_publish_stats_.average(),
+                       receive_to_camera_publish_stats_.min,
+                       receive_to_camera_publish_stats_.max,
+                       receive_to_camera_publish_stats_.count);
+      
+      HOLOSCAN_LOG_INFO("Camera publish to compute: avg={:.2f}, min={:.2f}, max={:.2f}, count={}",
+                       camera_publish_to_compute_stats_.average(),
+                       camera_publish_to_compute_stats_.min,
+                       camera_publish_to_compute_stats_.max,
+                       camera_publish_to_compute_stats_.count);
+      
+      HOLOSCAN_LOG_INFO("Application processing latency: avg={:.2f}, min={:.2f}, max={:.2f}, count={}",
+                       in_app_processing_latency_stats_.average(),
+                       in_app_processing_latency_stats_.min,
+                       in_app_processing_latency_stats_.max,
+                       in_app_processing_latency_stats_.count);
+
+      HOLOSCAN_LOG_INFO("Total end-to-end latency: avg={:.2f}, min={:.2f}, max={:.2f}, count={}",
+                       end_to_end_latency_stats_.average(),
+                       end_to_end_latency_stats_.min,
+                       end_to_end_latency_stats_.max,
+                       end_to_end_latency_stats_.count);
+      
+      // Calculate network latency based on 5 and 6
+      double average_network_latency_ms = end_to_end_latency_stats_.average() - in_app_processing_latency_stats_.average();
+      double min_network_latency_ms = end_to_end_latency_stats_.min - in_app_processing_latency_stats_.min; 
+      double max_network_latency_ms = end_to_end_latency_stats_.max - in_app_processing_latency_stats_.max;
+      HOLOSCAN_LOG_INFO("Average network latency: avg={:.2f}, min={:.2f}, max={:.2f}, count={}",
+                       average_network_latency_ms,
+                       min_network_latency_ms,
+                       max_network_latency_ms,
+                       in_app_processing_latency_stats_.count);
+
+      HOLOSCAN_LOG_INFO("Message loss count: {}", loss_message_count_);
+      HOLOSCAN_LOG_INFO("Frame loss count: {}", loss_frame_count_);
+
+      if (total_camera_info_messages_received_ > 0) {
+        HOLOSCAN_LOG_INFO("Message loss rate: {:.2f}%", 
+                         (static_cast<double>(loss_message_count_) / static_cast<double>(total_camera_info_messages_received_)) * 100.0);
+        HOLOSCAN_LOG_INFO("Frame loss rate: {:.2f}%", 
+                         (static_cast<double>(loss_frame_count_) / static_cast<double>(total_camera_info_messages_received_)) * 100.0);
+      }
+    }
+    
+    HOLOSCAN_LOG_INFO("=====================================");
+    
+    last_stats_time_ = current_time;
+  }
 
   if (output_written) {
     // Output the buffer
@@ -198,13 +331,7 @@ void DDSCameraInfoSubscriberOp::compute(InputContext& op_input, OutputContext& o
     op_output.emit(result, "video");
     op_output.emit(overlay_entity, "overlay");
     op_output.emit(overlay_specs, "overlay_specs");
-    HOLOSCAN_LOG_INFO("Emit complete");
   }
-
-  // calculate and print time elapsed
-  auto end_time = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-  HOLOSCAN_LOG_INFO("Time taken to compute: {} μs", duration.count());
 }
 
 
