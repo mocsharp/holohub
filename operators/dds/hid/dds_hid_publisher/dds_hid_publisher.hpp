@@ -59,6 +59,7 @@ class DDSHIDPublisherOp : public DDSOperatorBase {
  private:
   Parameter<std::string> writer_qos_;
   Parameter<HIDevicesConfig> hid_devices_;
+  Parameter<double> publish_rate_hz_;
 
   dds::pub::DataWriter<InputCommand> writer_ = dds::core::null;
 
@@ -73,11 +74,16 @@ class DDSHIDPublisherOp : public DDSOperatorBase {
   std::mutex buffer_mutex_;            // Mutex for synchronizing access to the event buffer
   std::condition_variable buffer_cv_;  // Condition variable for buffer synchronization
   
+  // Variables for throttling
+  std::chrono::milliseconds publish_interval_{};
+  std::chrono::steady_clock::time_point last_publish_time_;
+
   // Message tracking variables
   std::atomic<uint64_t> total_messages_sent_ = 0;
   std::atomic<uint64_t> next_message_id_{1};  // Atomic for thread-safe message ID generation
   std::chrono::time_point<std::chrono::steady_clock> last_stats_time_ = std::chrono::steady_clock::now();
   uint64_t stats_interval_ms_ = 5000; // Print stats every 5 seconds
+
 };
 
 }  // namespace holoscan::ops

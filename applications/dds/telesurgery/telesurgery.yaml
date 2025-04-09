@@ -31,13 +31,13 @@ surgeon:
     stop_on_deadlock_timeout: 500
   video:
     domain_id: 1
-    participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
-    reader_qos: "HoloscanDDSDataFlow::Video"
+    participant_qos: "TelesurgeryLibrary::TelesurgeryApplication"
+    reader_qos: "TelesurgeryLibrary::Video"
     topic: "robot_camera"
   room_cam:
     domain_id: 1
-    participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
-    reader_qos: "HoloscanDDSDataFlow::CameraInfo"
+    participant_qos: "TelesurgeryLibrary::TelesurgeryApplication"
+    reader_qos: "TelesurgeryLibrary::CameraInfo"
     topic: "robot_camera"
   format_converter:
     in_dtype: "rgb888"
@@ -46,9 +46,9 @@ surgeon:
     out_tensor_name: "room_converted_image"
   holoviz:
     window_title: "Telesurgery - Surgeon"
-    width: 640
+    width: 1280
     framerate: 120
-    height: 480
+    height: 1024
     tensors:
       - name: ""
         type: color
@@ -56,8 +56,8 @@ surgeon:
         priority: 0
   hid:
     domain_id: 1
-    participant_qos: HoloscanDDSTransport::SHMEM+LAN
-    writer_qos: HoloscanDDSDataFlow::Command
+    participant_qos: TelesurgeryLibrary::TelesurgeryApplication
+    writer_qos: TelesurgeryLibrary::Command
     hid_devices:
       - name: joystick1
         path: /dev/input/js0
@@ -81,8 +81,8 @@ robot:
     device: /dev/video0
   hid:
     domain_id: 1
-    participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
-    reader_qos: "HoloscanDDSDataFlow::Command"
+    participant_qos: "TelesurgeryLibrary::TelesurgeryApplication"
+    reader_qos: "TelesurgeryLibrary::Command"
     hid_device_filters:
       - joystick1
       - keyboard1
@@ -118,8 +118,8 @@ robot:
   video_publisher:
     domain_id: 1
     stream_id: 0
-    participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
-    writer_qos: "HoloscanDDSDataFlow::Video"
+    participant_qos: "TelesurgeryLibrary::TelesurgeryApplication"
+    writer_qos: "TelesurgeryLibrary::Video"
 
 
 resources:

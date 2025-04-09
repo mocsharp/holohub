@@ -18,6 +18,8 @@
 #include "dds_hid_publisher.hpp"
 
 #include <dds/topic/find.hpp>
+#include <map>
+#include <chrono>
 
 namespace holoscan::ops {
 
@@ -30,11 +32,23 @@ void DDSHIDPublisherOp::setup(OperatorSpec& spec) {
              "HID Devices",
              "HID Devices for the DDS HID Stream",
              HIDevicesConfig());
+  spec.param(publish_rate_hz_,
+             "publish_rate_hz",
+             "Publish Rate (Hz)",
+             "Maximum rate at which to publish HID commands.",
+             120.0);
 }
 
 void DDSHIDPublisherOp::initialize() {
   register_converter<holoscan::ops::HIDevicesConfig>();
   DDSOperatorBase::initialize();
+
+  if (publish_rate_hz_.get() <= 0.0) {
+    throw std::invalid_argument("Publish rate must be positive.");
+  }
+  publish_interval_ = std::chrono::milliseconds(
+      static_cast<long long>(1000.0 / publish_rate_hz_.get()));
+  last_publish_time_ = std::chrono::steady_clock::now();
 
   // Open the device
   for (const auto& device : hid_devices_.get().devices) {
@@ -86,71 +100,79 @@ void DDSHIDPublisherOp::start() {
         }
 
         while (read(device.file_descriptor, event_ptr, event_size) > 0) {
-          std::lock_guard<std::mutex> lock(buffer_mutex_);
+          // std::lock_guard<std::mutex> lock(buffer_mutex_);
           // capture timestamp in unix timestamp
           auto capture_time_epoch =
               std::chrono::high_resolution_clock::now().time_since_epoch().count();
           event_buffer_.push(std::make_tuple(device, event, capture_time_epoch));
-          buffer_cv_.notify_one();
+          // buffer_cv_.notify_one();
         }
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
   });
 }
 
 void DDSHIDPublisherOp::compute(InputContext& op_input, OutputContext& op_output,
                                 ExecutionContext& context) {
-  std::unique_lock<std::mutex> lock(buffer_mutex_);
-  buffer_cv_.wait(lock, [this] { return !event_buffer_.empty(); });
+  auto now = std::chrono::steady_clock::now();
+  // if (now - last_publish_time_ < publish_interval_) {
+  //   return;
+  // }
 
-  // Process and emit buffered events
-  while (!event_buffer_.empty()) {
-    auto [device, current_event, capture_time_epoch] = event_buffer_.front();
-    event_buffer_.pop();
+  std::map<std::pair<std::string, uint8_t>, InputCommand> latest_commands_in_batch;
 
-    // Convert event to InputCommand
-    InputCommand command;
-    command.device_type(device.type);
-    command.device_name(device.name);
+  {
+    // std::unique_lock<std::mutex> lock(buffer_mutex_);
+    // buffer_cv_.wait(lock, [this] { return !event_buffer_.empty(); });
 
-    switch (device.type) {
-      case HIDDeviceType::JOYSTICK: {
-        command.event_type(static_cast<uint8_t>(std::get<js_event>(current_event).type));
-        command.number(static_cast<uint8_t>(std::get<js_event>(current_event).number));
-        command.value(std::get<js_event>(current_event).value);
-        break;
+    while (!event_buffer_.empty()) {
+      auto [device, current_event, capture_time_epoch] = event_buffer_.front();
+      event_buffer_.pop();
+
+      InputCommand command;
+      command.device_type(device.type);
+      command.device_name(device.name);
+      command.capture_timestamp(capture_time_epoch);
+
+      switch (device.type) {
+        case HIDDeviceType::JOYSTICK: {
+          command.event_type(static_cast<uint8_t>(std::get<js_event>(current_event).type));
+          command.number(static_cast<uint8_t>(std::get<js_event>(current_event).number));
+          command.value(std::get<js_event>(current_event).value);
+          break;
+        }
+        case HIDDeviceType::MOUSE:
+        case HIDDeviceType::KEYBOARD: {
+          const auto& input_ev = std::get<input_event>(current_event);
+          command.event_type(static_cast<uint8_t>(input_ev.type));
+          command.number(static_cast<uint8_t>(input_ev.code));
+          command.value(input_ev.value);
+          break;
+        }
       }
-      case HIDDeviceType::MOUSE:
-      case HIDDeviceType::KEYBOARD: {
-        const auto& input_ev = std::get<input_event>(current_event);
-        command.event_type(static_cast<uint8_t>(input_ev.type));
-        command.number(static_cast<uint8_t>(input_ev.code));
-        command.value(input_ev.value);
-        break;
-      }
+      latest_commands_in_batch[{command.device_name(), command.number()}] = command;
     }
-
-    // Set capture timestamp
-    command.capture_timestamp(capture_time_epoch);
-
-    // Set publish timestamp
-    auto publish_timestamp = std::chrono::high_resolution_clock::now();
-    command.publish_timestamp(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(publish_timestamp.time_since_epoch())
-            .count());
-
-    // Assign a unique message ID
-    command.message_id(next_message_id_);
-
-    // Write the InputCommand to the writer
-    writer_.write(command);
-    // HOLOSCAN_LOG_INFO("Published InputCommand message with ID: {}", next_message_id_.load());
-    total_messages_sent_++;
-    next_message_id_++;
   }
 
-  // Check if it's time to print stats
+  if (!latest_commands_in_batch.empty()) {
+    auto publish_timestamp_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::high_resolution_clock::now().time_since_epoch())
+            .count();
+
+    for (auto const& [key, command_to_send] : latest_commands_in_batch) {
+      InputCommand final_command = command_to_send;
+      final_command.publish_timestamp(publish_timestamp_ns);
+      final_command.message_id(next_message_id_);
+      // HOLOSCAN_LOG_INFO("Publishing final command: Device={}, Number{}", key.first, key.second);
+      writer_.write(final_command);
+      total_messages_sent_++;
+      next_message_id_++;
+    }
+    // HOLOSCAN_LOG_INFO("Current batch size: {}", latest_commands_in_batch.size());
+    last_publish_time_ = now;
+  }
+
   auto current_time = std::chrono::steady_clock::now();
   auto elapsed =
       std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_stats_time_)
@@ -160,6 +182,8 @@ void DDSHIDPublisherOp::compute(InputContext& op_input, OutputContext& op_output
     HOLOSCAN_LOG_INFO("=== InputCommand Publisher Statistics ===");
     HOLOSCAN_LOG_INFO("Total InputCommand messages sent: {}", total_messages_sent_.load());
     HOLOSCAN_LOG_INFO("Next message ID: {}", next_message_id_.load());
+    HOLOSCAN_LOG_INFO("Publish rate: {} Hz", publish_rate_hz_.get());
+    HOLOSCAN_LOG_INFO("Publish interval: {} ms", publish_interval_.count());
     HOLOSCAN_LOG_INFO("=========================================");
 
     last_stats_time_ = current_time;
@@ -168,6 +192,7 @@ void DDSHIDPublisherOp::compute(InputContext& op_input, OutputContext& op_output
 
 void DDSHIDPublisherOp::stop() {
   running_ = false;
+  buffer_cv_.notify_all();
   if (event_thread_.joinable()) { event_thread_.join(); }
   for (auto& [device_name, device] : device_file_descriptors_) { close(device.file_descriptor); }
 }

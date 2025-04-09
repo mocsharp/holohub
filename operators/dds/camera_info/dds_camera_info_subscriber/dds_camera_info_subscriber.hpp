@@ -95,10 +95,12 @@ class DDSCameraInfoSubscriberOp : public DDSOperatorBase {
   
   LatencyStats capture_to_publish_stats_;
   LatencyStats publish_to_receive_stats_;
-  LatencyStats receive_to_camera_publish_stats_;
+  LatencyStats receive_to_camera_update_stats_;
+  LatencyStats camera_update_to_publish_stats_;
   LatencyStats camera_publish_to_compute_stats_;
   LatencyStats end_to_end_latency_stats_;
   LatencyStats in_app_processing_latency_stats_;
+  LatencyStats network_latency_stats_;
 };
 
 }  // namespace holoscan::ops

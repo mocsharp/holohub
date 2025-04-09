@@ -95,8 +95,11 @@ class SurgeonApp : public holoscan::Application {
     using namespace holoscan;
 
     // Capture HID events and publish them to DDS
-    auto hid_publisher =
-        make_operator<ops::DDSHIDPublisherOp>("hid_publisher", from_config("surgeon.hid"));
+    auto hid_publisher = make_operator<ops::DDSHIDPublisherOp>(
+        "hid_publisher",
+        make_condition<PeriodicCondition>("periodic-condition",
+                                          Arg("recess_period") = std::string("60hz")),
+        from_config("surgeon.hid"));
     add_operator(hid_publisher);
 
     auto room_cam_subscriber = make_operator<ops::DDSCameraInfoSubscriberOp>(
@@ -119,9 +122,7 @@ class SurgeonApp : public holoscan::Application {
 
     add_flow(room_cam_subscriber,
              holoviz,
-             {{"video", "receivers"},
-              {"overlay", "receivers"},
-              {"overlay_specs", "input_specs"}});
+             {{"video", "receivers"}, {"overlay", "receivers"}, {"overlay_specs", "input_specs"}});
   }
 };
 

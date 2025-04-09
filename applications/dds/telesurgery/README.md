@@ -101,8 +101,8 @@ surgeon:
   video:
     domain_id: 0
     stream_id: 0
-    participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
-    reader_qos: "HoloscanDDSDataFlow::Video"
+    participant_qos: "TelesurgeryLibrary::TelesurgeryApplication"
+    reader_qos: "TelesurgeryLibrary::Video"
   holoviz:
     window_title: "Telesurgery - Surgeon"
     width: 1024
@@ -114,8 +114,8 @@ surgeon:
         priority: 0
   hid:
     domain_id: 0
-    participant_qos: HoloscanDDSTransport::SHMEM+LAN
-    writer_qos: HoloscanDDSDataFlow::Command
+    participant_qos: TelesurgeryLibrary::TelesurgeryApplication
+    writer_qos: TelesurgeryLibrary::Command
     hid_devices:
       - name: joystick1
         path: /dev/input/js0
@@ -147,8 +147,8 @@ robot:
     device: /dev/video0
   hid:
     domain_id: 0
-    participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
-    reader_qos: "HoloscanDDSDataFlow::Command"
+    participant_qos: "TelesurgeryLibrary::TelesurgeryApplication"
+    reader_qos: "TelesurgeryLibrary::Command"
     hid_device_filters:
       - joystick1
       - keyboard1
@@ -184,8 +184,8 @@ robot:
   video_publisher:
     domain_id: 0
     stream_id: 0
-    participant_qos: "HoloscanDDSTransport::SHMEM+LAN"
-    writer_qos: "HoloscanDDSDataFlow::Video"
+    participant_qos: "TelesurgeryLibrary::TelesurgeryApplication"
+    writer_qos: "TelesurgeryLibrary::Video"
 ```
 
 `video.device` is the path to the V4L2 device to use for the robot's video stream. 

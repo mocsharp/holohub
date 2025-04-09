@@ -13,6 +13,7 @@ struct CameraInfo {
   int64 capture_timestamp;  // Timestamp when the HID event was captured in nanoseconds
   int64 hid_publish_timestamp;  // Timestamp when the HID event was published by the Surgeon app in nanoseconds
   int64 receive_timestamp;  // Timestamp when the event was received by IS in nanoseconds
+  int64 camera_update_time; // Timestamp after camera is updated in IS in nanoseconds
   int64 camera_publish_timestamp;  // Timestamp when the camera info was published in nanoseconds
 
   uint64 message_id;
