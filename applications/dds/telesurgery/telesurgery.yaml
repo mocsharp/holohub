@@ -46,9 +46,9 @@ surgeon:
     out_tensor_name: "room_converted_image"
   holoviz:
     window_title: "Telesurgery - Surgeon"
-    width: 1280
+    width: 640
     framerate: 120
-    height: 1024
+    height: 480
     tensors:
       - name: ""
         type: color

@@ -32,23 +32,11 @@ void DDSHIDPublisherOp::setup(OperatorSpec& spec) {
              "HID Devices",
              "HID Devices for the DDS HID Stream",
              HIDevicesConfig());
-  spec.param(publish_rate_hz_,
-             "publish_rate_hz",
-             "Publish Rate (Hz)",
-             "Maximum rate at which to publish HID commands.",
-             120.0);
 }
 
 void DDSHIDPublisherOp::initialize() {
   register_converter<holoscan::ops::HIDevicesConfig>();
   DDSOperatorBase::initialize();
-
-  if (publish_rate_hz_.get() <= 0.0) {
-    throw std::invalid_argument("Publish rate must be positive.");
-  }
-  publish_interval_ = std::chrono::milliseconds(
-      static_cast<long long>(1000.0 / publish_rate_hz_.get()));
-  last_publish_time_ = std::chrono::steady_clock::now();
 
   // Open the device
   for (const auto& device : hid_devices_.get().devices) {
@@ -116,16 +104,10 @@ void DDSHIDPublisherOp::start() {
 void DDSHIDPublisherOp::compute(InputContext& op_input, OutputContext& op_output,
                                 ExecutionContext& context) {
   auto now = std::chrono::steady_clock::now();
-  // if (now - last_publish_time_ < publish_interval_) {
-  //   return;
-  // }
 
   std::map<std::pair<std::string, uint8_t>, InputCommand> latest_commands_in_batch;
 
   {
-    // std::unique_lock<std::mutex> lock(buffer_mutex_);
-    // buffer_cv_.wait(lock, [this] { return !event_buffer_.empty(); });
-
     while (!event_buffer_.empty()) {
       auto [device, current_event, capture_time_epoch] = event_buffer_.front();
       event_buffer_.pop();
@@ -133,7 +115,7 @@ void DDSHIDPublisherOp::compute(InputContext& op_input, OutputContext& op_output
       InputCommand command;
       command.device_type(device.type);
       command.device_name(device.name);
-      command.capture_timestamp(capture_time_epoch);
+      command.hid_capture_timestamp(capture_time_epoch);
 
       switch (device.type) {
         case HIDDeviceType::JOYSTICK: {
@@ -162,7 +144,7 @@ void DDSHIDPublisherOp::compute(InputContext& op_input, OutputContext& op_output
 
     for (auto const& [key, command_to_send] : latest_commands_in_batch) {
       InputCommand final_command = command_to_send;
-      final_command.publish_timestamp(publish_timestamp_ns);
+      final_command.hid_publish_timestamp(publish_timestamp_ns);
       final_command.message_id(next_message_id_);
       // HOLOSCAN_LOG_INFO("Publishing final command: Device={}, Number{}", key.first, key.second);
       writer_.write(final_command);
@@ -182,8 +164,6 @@ void DDSHIDPublisherOp::compute(InputContext& op_input, OutputContext& op_output
     HOLOSCAN_LOG_INFO("=== InputCommand Publisher Statistics ===");
     HOLOSCAN_LOG_INFO("Total InputCommand messages sent: {}", total_messages_sent_.load());
     HOLOSCAN_LOG_INFO("Next message ID: {}", next_message_id_.load());
-    HOLOSCAN_LOG_INFO("Publish rate: {} Hz", publish_rate_hz_.get());
-    HOLOSCAN_LOG_INFO("Publish interval: {} ms", publish_interval_.count());
     HOLOSCAN_LOG_INFO("=========================================");
 
     last_stats_time_ = current_time;

@@ -59,7 +59,6 @@ class DDSHIDPublisherOp : public DDSOperatorBase {
  private:
   Parameter<std::string> writer_qos_;
   Parameter<HIDevicesConfig> hid_devices_;
-  Parameter<double> publish_rate_hz_;
 
   dds::pub::DataWriter<InputCommand> writer_ = dds::core::null;
 

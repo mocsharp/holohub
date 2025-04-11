@@ -153,20 +153,23 @@ void DDSCameraInfoSubscriberOp::compute(InputContext& op_input, OutputContext& o
       }
 
       // Calculate latencies - only for messages with non-zero message_id
-      if (message_id != 0 && frame.data().capture_timestamp() > 0 &&
-          frame.data().hid_publish_timestamp() > 0 && frame.data().receive_timestamp() > 0 &&
+      if (message_id != 0 && frame.data().hid_capture_timestamp() > 0 &&
+          frame.data().hid_publish_timestamp() > 0 && frame.data().hid_receive_timestamp() > 0 &&
           frame.data().camera_update_time() > 0 && frame.data().camera_publish_timestamp() > 0) {
         // 1. Capture to HID publish latency (ms)
         double capture_to_publish_ms =
-            (frame.data().hid_publish_timestamp() - frame.data().capture_timestamp()) / 1000000.0;
+            (frame.data().hid_publish_timestamp() - frame.data().hid_capture_timestamp()) /
+            1000000.0;
 
         // 2. HID publish to receive latency (ms)
         double publish_to_receive_ms =
-            (frame.data().receive_timestamp() - frame.data().hid_publish_timestamp()) / 1000000.0;
+            (frame.data().hid_receive_timestamp() - frame.data().hid_publish_timestamp()) /
+            1000000.0;
 
         // 3. Receive to Sim Process Start latency (ms)
         double receive_to_camera_update_ms =
-            (frame.data().camera_update_time() - frame.data().receive_timestamp()) / 1000000.0;
+            (frame.data().camera_update_time() - frame.data().hid_receive_timestamp()) /
+            1000000.0;
 
         // 4. Sim Process Start to Camera Publish latency (ms)
         double camera_update_to_publish_ms =
@@ -183,7 +186,7 @@ void DDSCameraInfoSubscriberOp::compute(InputContext& op_input, OutputContext& o
 
         // 7. Total end-to-end latency (ms)
         double capture_to_compute_ms =
-            (current_time_ns - frame.data().capture_timestamp()) / 1000000.0;
+            (current_time_ns - frame.data().hid_capture_timestamp()) / 1000000.0;
 
         // 8. Network latency (ms)
         double network_latency_ms = publish_to_receive_ms + camera_publish_to_compute_ms;
