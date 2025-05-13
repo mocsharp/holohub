@@ -1,7 +1,7 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Licensed under the Apache License, Version 2.0 (the "License")
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,192 +13,288 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from argparse import ArgumentParser
+import logging
+from typing import Callable
+import queue
+import time
+from holoscan.conditions import AsynchronousCondition, AsynchronousEventState, PeriodicCondition
+from holoscan.core import Operator, OperatorSpec, Tensor,Application
+from holoscan.operators import FormatConverterOp, HolovizOp, GXFCodeletOp
+from holoscan.resources import (
+    GXFComponentResource,
+    UnboundedAllocator,
+    BlockMemoryPool,
+    MemoryStorageType,
+)
+from holohub.tensor_to_video_buffer import TensorToVideoBufferOp
+from holohub.reshape_op import ReshapeOp
+import warp
+import numpy as np
+import cupy as cp
 
-try:
-    from holoscan.conditions import AsynchronousCondition, CountCondition, PeriodicCondition
-except ImportError as e:
-    raise ImportError(
-        "This example requires Holoscan SDK >= 2.1.0 so AsynchronousCondition is available."
-    ) from e
-from holoscan.core import Application
-from holoscan.gxf import load_extensions
-from holoscan.operators import FormatConverterOp, GXFCodeletOp, HolovizOp
-from holoscan.resources import BlockMemoryPool, GXFComponentResource, MemoryStorageType
+class AsyncDataPushForDDS(Operator):
+    def __init__(self, fragment, max_queue_size: int = 0, condition: AsynchronousCondition = None, *args, **kwargs):
+        self._queue = queue.Queue(maxsize=max_queue_size)
+        self._logger = logging.getLogger(__name__)
+        self._printed_image_size = False
+        self.condition = condition
+        super().__init__(fragment, *args, **kwargs)
 
-# Import h.264 GXF codelets and components as Holoscan operators and resources
-# Starting with Holoscan SDK v2.1.0, importing GXF codelets/components as Holoscan operators/
-# resources can be done by extending the GXFCodeletOp class and the GXFComponentResource class.
-# This new feature allows GXF codelets and components in Holoscan applications without writing
-# custom class wrappers in C++ and Python wrappers for each GXF codelet and component.
+    def setup(self, spec: OperatorSpec):
+        spec.output("image")
+
+    def start(self):
+        self.condition.event_state = AsynchronousEventState.EVENT_WAITING
+
+    def stop(self):
+        self.condition.event_state = AsynchronousEventState.EVENT_NEVER
+
+    def compute(self, op_input, op_output, context):
+        data = self._queue.get()
+
+        print(f"Type: {type(data)}")
+        op_output.emit({"": Tensor.as_tensor(data)}, "image")
+
+        self.condition.event_state = AsynchronousEventState.EVENT_WAITING
+
+    def push_data(self, data):
+        self._queue.put(data)
+        self.condition.event_state = AsynchronousEventState.EVENT_DONE
 
 
-# The VideoDecoderRequestOp implements nvidia::gxf::VideoDecoderRequest and handles the input
-# for the H264 bit stream decode.
-# Parameters:
-# - inbuf_storage_type (int): Input Buffer storage type, 0:kHost, 1:kDevice.
-# - async_scheduling_term (AsynchronousCondition): Asynchronous scheduling condition.
-# - videodecoder_context (VideoDecoderContext): Decoder context Handle.
-# - codec (int): Video codec to use, 0:H264, only H264 supported. Default:0.
-# - disableDPB (int): Enable low latency decode, works only for IPPP case.
-# - output_format (str): VidOutput frame video format, nv12pl and yuv420planar are supported.
+class VideoEncoderContext(GXFComponentResource):
+    def __init__(self, fragment, *args, **kwargs):
+        super().__init__(fragment, "nvidia::gxf::VideoEncoderContext", *args, **kwargs)
+
+class VideoEncoderRequestOp(GXFCodeletOp):
+    def __init__(self, fragment, *args, **kwargs):
+        super().__init__(fragment, "nvidia::gxf::VideoEncoderRequest", *args, **kwargs)
+
+class VideoEncoderResponseOp(GXFCodeletOp):
+    def __init__(self, fragment, *args, **kwargs):
+        super().__init__(fragment, "nvidia::gxf::VideoEncoderResponse", *args, **kwargs)
+
 class VideoDecoderRequestOp(GXFCodeletOp):
     def __init__(self, fragment, *args, **kwargs):
         super().__init__(fragment, "nvidia::gxf::VideoDecoderRequest", *args, **kwargs)
 
-
-# The VideoDecoderResponseOp implements nvidia::gxf::VideoDecoderResponse and handles the output
-# of the decoded H264 bit stream.
-# Parameters:
-# - pool (Allocator): Memory pool for allocating output data.
-# - outbuf_storage_type (int): Output Buffer Storage(memory) type used by this allocator.
-#   Can be 0: kHost, 1: kDevice.
-# - videodecoder_context (VideoDecoderContext): Decoder context
-#   Handle.
 class VideoDecoderResponseOp(GXFCodeletOp):
     def __init__(self, fragment, *args, **kwargs):
         super().__init__(fragment, "nvidia::gxf::VideoDecoderResponse", *args, **kwargs)
 
 
-# The VideoDecoderContext implements nvidia::gxf::VideoDecoderContext and holds common variables
-# and underlying context.
-# Parameters:
-# - async_scheduling_term (AsynchronousCondition): Asynchronous scheduling condition required to get/set event state.
 class VideoDecoderContext(GXFComponentResource):
     def __init__(self, fragment, *args, **kwargs):
         super().__init__(fragment, "nvidia::gxf::VideoDecoderContext", *args, **kwargs)
+class PatientApp(Application):
+    """A Holoscan application for transmitting data over RoCE (RDMA over Converged Ethernet).
 
+    This application sets up a data transmission pipeline that can either transmit data
+    over a RoCE network interface or display the data locally using Holoviz if no RoCE
+    device is available.
 
-# The VideoReadBitstreamOp implements nvidia::gxf::VideoReadBitStream and reads h.264 video files
-# from the disk at the specified input file path.
-# Parameters:
-# - input_file_path (str): Path to image file
-# - pool (Allocator): Memory pool for allocating output data
-# - outbuf_storage_type (int): Output Buffer storage type, 0:kHost, 1:kDevice
-class VideoReadBitstreamOp(GXFCodeletOp):
-    def __init__(self, fragment, *args, **kwargs):
-        super().__init__(fragment, "nvidia::gxf::VideoReadBitStream", *args, **kwargs)
+    Args:
+        ibv_name (str): Name of the InfiniBand verb (IBV) device to use for RoCE transmission.
+        ibv_port (int): Port number for the IBV device.
+        hololink_ip (str): IP address of the Hololink receiver.
+        ibv_qp (int): Queue pair number for the IBV device.
+        tx_queue_size (int): Size of the transmission queue.
+        buffer_size (int): Size of the buffer for data transmission.
+    """
 
+    def __init__(
+        self,
+        hid_event_callback: Callable,
+    ):
+        """Initialize the TransmitterApp.
 
-class H264VideoDecodeApp(Application):
-    def __init__(self, data):
-        """Initialize the H264 video decode application"""
+        Args:
+            tx_queue_size (int): Size of the transmission queue.
+            buffer_size (int): Size of the buffer for data transmission.
+        """
+        self._hid_event_callback = hid_event_callback
+        self._logger = logging.getLogger(__name__)
+
+        self._async_data_push = None
         super().__init__()
 
-        # set name
-        self.name = "H264 video decode App"
-
-        if (data is None) or (data == "none"):
-            data = os.environ.get("HOLOHUB_DATA_PATH", "../data")
-
-        self.sample_data_path = data
-
     def compose(self):
-        width = 854
-        height = 480
-        source_block_size = width * height * 3 * 4
+        """Compose the application workflow.
+
+        Sets up the data transmission pipeline by creating and connecting the necessary operators.
+        If a RoCE device is available, creates a RoceTransmitterOp for network transmission.
+        Otherwise, creates a HolovizOp for local visualization.
+        """
+
+        source_block_size = 1920 * 1080 * 3 * 4
         source_num_blocks = 2
+        source_rate_hz = 60  # messages sent per second
+        period_source_ns = int(1e9 / source_rate_hz)  # period in nanoseconds
 
-        bitstream_reader = VideoReadBitstreamOp(
-            self,
-            CountCondition(self, 750),
-            PeriodicCondition(self, name="periodic-condition", recess_period=0.04),
-            name="bitstream_reader",
-            input_file_path=f"{self.sample_data_path}/surgical_video.264",
-            pool=BlockMemoryPool(
+        if True:
+            self._async_data_push = AsyncDataPushForDDS(
                 self,
-                name="pool",
-                storage_type=MemoryStorageType.HOST,
-                block_size=source_block_size,
-                num_blocks=source_num_blocks,
-            ),
-            **self.kwargs("bitstream_reader"),
-        )
+                name="Async Data Push",
+                condition=AsynchronousCondition(self)
+            )
 
-        response_condition = AsynchronousCondition(self, "response_condition")
-        video_decoder_context = VideoDecoderContext(self, async_scheduling_term=response_condition)
-
-        request_condition = AsynchronousCondition(self, "request_condition")
-        video_decoder_request = VideoDecoderRequestOp(
-            self,
-            name="video_decoder_request",
-            async_scheduling_term=request_condition,
-            videodecoder_context=video_decoder_context,
-            **self.kwargs("video_decoder_request"),
-        )
-
-        video_decoder_response = VideoDecoderResponseOp(
-            self,
-            name="video_decoder_response",
-            pool=BlockMemoryPool(
+            rgba_to_rgb_format_converter = FormatConverterOp(
                 self,
-                name="pool",
-                storage_type=MemoryStorageType.DEVICE,
-                block_size=source_block_size,
-                num_blocks=source_num_blocks,
-            ),
-            videodecoder_context=video_decoder_context,
-            **self.kwargs("video_decoder_response"),
-        )
+                name="rgba_to_rgb_format_converter",
+                pool=BlockMemoryPool(
+                    self,
+                    name="pool",
+                    storage_type=MemoryStorageType.DEVICE,
+                    block_size=source_block_size,
+                    num_blocks=source_num_blocks,
+                ),
+                **self.kwargs("rgba_to_rgb_format_converter"),
+            )
 
-        decoder_output_format_converter = FormatConverterOp(
-            self,
-            name="decoder_output_format_converter",
-            pool=BlockMemoryPool(
+            rgb_to_yuv420_format_converter = FormatConverterOp(
                 self,
-                name="pool",
-                storage_type=MemoryStorageType.DEVICE,
-                block_size=source_block_size,
-                num_blocks=source_num_blocks,
-            ),
-            **self.kwargs("decoder_output_format_converter"),
-        )
+                name="rgb_to_yuv420_format_converter",
+                pool=BlockMemoryPool(
+                    self,
+                    name="pool",
+                    storage_type=MemoryStorageType.DEVICE,
+                    block_size=source_block_size,
+                    num_blocks=source_num_blocks,
+                ),
+                **self.kwargs("rgb_to_yuv420_format_converter"),
+            )
 
-        visualizer_allocator = BlockMemoryPool(
-            self,
-            name="allocator",
-            storage_type=MemoryStorageType.DEVICE,
-            block_size=source_block_size,
-            num_blocks=source_num_blocks,
-        )
-        visualizer = HolovizOp(
-            self,
-            name="holoviz",
-            width=width,
-            height=height,
-            enable_render_buffer_input=False,
-            enable_render_buffer_output=False,
-            allocator=visualizer_allocator,
-            **self.kwargs("holoviz"),
-        )
+            tensor_to_video_buffer = TensorToVideoBufferOp(
+                self, name="tensor_to_video_buffer", **self.kwargs("tensor_to_video_buffer")
+            )
+            encoder_async_condition = AsynchronousCondition(self, "encoder_async_condition")
+            video_encoder_context = VideoEncoderContext(
+                self, scheduling_term=encoder_async_condition
+            )
+            video_encoder_request = VideoEncoderRequestOp(
+                self,
+                name="video_encoder_request",
+                videoencoder_context=video_encoder_context,
+                **self.kwargs("video_encoder_request"),
+            )
+            video_encoder_response = VideoEncoderResponseOp(
+                self,
+                name="video_encoder_response",
+                pool=BlockMemoryPool(
+                    self,
+                    name="pool",
+                    storage_type=MemoryStorageType.DEVICE,
+                    block_size=source_block_size,
+                    num_blocks=source_num_blocks,
+                ),
+                videoencoder_context=video_encoder_context,
+                **self.kwargs("video_encoder_response"),
+            )
 
-        self.add_flow(
-            bitstream_reader, video_decoder_request, {("output_transmitter", "input_frame")}
-        )
-        self.add_flow(
-            video_decoder_response,
-            decoder_output_format_converter,
-            {("output_transmitter", "source_video")},
-        )
-        self.add_flow(decoder_output_format_converter, visualizer, {("tensor", "receivers")})
+            response_condition = AsynchronousCondition(self, "response_condition")
+            video_decoder_context = VideoDecoderContext(self, async_scheduling_term=response_condition)
 
+            request_condition = AsynchronousCondition(self, "request_condition")
+            video_decoder_request = VideoDecoderRequestOp(
+                self,
+                name="video_decoder_request",
+                async_scheduling_term=request_condition,
+                videodecoder_context=video_decoder_context,
+                **self.kwargs("video_decoder_request"),
+            )
+
+            video_decoder_response = VideoDecoderResponseOp(
+                self,
+                name="video_decoder_response",
+                pool=BlockMemoryPool(
+                    self,
+                    name="pool",
+                    storage_type=MemoryStorageType.DEVICE,
+                    block_size=source_block_size,
+                    num_blocks=source_num_blocks,
+                ),
+                videodecoder_context=video_decoder_context,
+                **self.kwargs("video_decoder_response"),
+            )
+
+            decoder_output_format_converter = FormatConverterOp(
+                self,
+                name="decoder_output_format_converter",
+                pool=BlockMemoryPool(
+                    self,
+                    name="pool",
+                    storage_type=MemoryStorageType.DEVICE,
+                    block_size=source_block_size,
+                    num_blocks=source_num_blocks,
+                ),
+                **self.kwargs("decoder_output_format_converter"),
+            )
+
+            visualizer = HolovizOp(
+                self,
+                name="visualizer",
+                window_title="Encode & Decode",
+                width=300,
+                height=300,
+                tensors=[
+                    HolovizOp.InputSpec("", HolovizOp.InputType.COLOR),
+                ],
+            )
+
+            self.add_flow(self._async_data_push, rgba_to_rgb_format_converter, {("image", "source_video")})
+            self.add_flow(rgba_to_rgb_format_converter, rgb_to_yuv420_format_converter, {("tensor", "source_video")})
+            self.add_flow(rgb_to_yuv420_format_converter, tensor_to_video_buffer, {("tensor", "in_tensor")})
+            self.add_flow(tensor_to_video_buffer, video_encoder_request, {("out_video_buffer", "input_frame")})
+            
+            reshape_op = ReshapeOp(self, name="reshape_op", allocator=BlockMemoryPool(
+                    self,
+                    name="pool",
+                    storage_type=MemoryStorageType.DEVICE,
+                    block_size=source_block_size,
+                    num_blocks=source_num_blocks,
+                ), out_storage_type=1)
+            self.add_flow(
+                video_encoder_response, reshape_op, {("output_transmitter", "in")}
+            )
+            self.add_flow(
+                reshape_op, video_decoder_request, {("out", "input_frame")}
+            )
+            self.add_flow(
+                video_decoder_response,
+                decoder_output_format_converter,
+                {("output_transmitter", "source_video")},
+            )
+            self.add_flow(decoder_output_format_converter, visualizer, {("tensor", "receivers")})
+
+    def push_data(self, data):
+        """Push data into the transmission pipeline.
+
+        Args:
+            data: The data to be transmitted or displayed.
+        """
+
+        if self._async_data_push is not None:
+            self._async_data_push.push_data(data)
+        else:
+            self._logger.warning("AsyncDataPushOp is not initialized")
+
+
+import os
+from argparse import ArgumentParser
+from holoscan.gxf import load_extensions
+
+def callback():
+    pass
 
 if __name__ == "__main__":
     # Parse args
-    parser = ArgumentParser(description="H264 video decode demo application.")
+    parser = ArgumentParser(description="Endoscopy tool tracking demo application.")
 
     parser.add_argument(
         "-c",
         "--config",
         default="none",
         help=("Set config path to override the default config file location"),
-    )
-    parser.add_argument(
-        "-d",
-        "--data",
-        default="none",
-        help=("Set the data path"),
     )
     args = parser.parse_args()
 
@@ -207,14 +303,37 @@ if __name__ == "__main__":
     else:
         config_file = args.config
 
-    app = H264VideoDecodeApp(data=args.data)
+    app = PatientApp(callback)
 
     context = app.executor.context_uint64
     exts = [
         "libgxf_videodecoder.so",
         "libgxf_videodecoderio.so",
+        "libgxf_videoencoder.so",
+        "libgxf_videoencoderio.so",
     ]
-    load_extensions(context, exts)
+    # load_extensions(context, exts)
+
+    # create a thread to call app.push_data() with a random image
+    import threading
+    import time
+
+    def random_image_thread():
+        frame_num = 0
+        width, height = 1280, 720  # Smaller than current 1920x1080
+        while True:
+            print("pushing data")
+            # Create a random NumPy array
+            np_image = np.random.randint(0, 256, size=(height, width, 4), dtype=np.uint8)
+            # Convert NumPy array to Warp array (assuming CUDA device)
+            image = warp.array(np_image, dtype=warp.types.uint8)
+            app.push_data(image)
+            frame_num += 1
+            time.sleep(1)
+
+    t = threading.Thread(target=random_image_thread)
+    t.start()
 
     app.config(config_file)
     app.run()
+    t.join()

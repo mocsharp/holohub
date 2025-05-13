@@ -21,4 +21,6 @@ add_holohub_application(h264_endoscopy_tool_tracking DEPENDS
                         )
 
 add_holohub_application(h264_video_decode DEPENDS
-                        OPERATORS video_decoder video_read_bitstream)
+                        OPERATORS video_decoder video_read_bitstream
+                        tensor_to_video_buffer
+                        reshape_op)

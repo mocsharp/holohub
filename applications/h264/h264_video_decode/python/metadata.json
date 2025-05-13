@@ -33,7 +33,7 @@
       ]
     },
     "run": {
-      "command": "python3 <holohub_app_source>/h264_video_decode.py --data <holohub_data_dir>/endoscopy",
+      "command": "python3 <holohub_app_source>/h264_video_decode.py ",
       "workdir": "holohub_bin"
     }
   }
