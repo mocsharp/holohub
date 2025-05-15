@@ -1,0 +1,18 @@
+{
+    "recommendations": [
+        "akiramiyakoda.cppincludeguard",
+        "benjamin-simmonds.pythoncpp-debug", // Python/C++ debugging
+        "charliermarsh.ruff",
+        "matepek.vscode-catch2-test-adapter",
+        "mine.cpplint",
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-vscode.cpptools-extension-pack",
+        "redhat.vscode-yaml",
+        "rioj7.command-variable",
+        "shardulm94.trailing-spaces",
+        "shd101wyy.markdown-preview-enhanced",
+        "stkb.rewrap"
+    ]
+}

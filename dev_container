@@ -1276,6 +1276,10 @@ vscode() {
         devcontainer_env_file+="\"--volume=/usr/share/nvidia/nvoptix.bin:/usr/share/nvidia/nvoptix.bin:ro\","
     fi
 
+    # Forward GPG agent socket
+    devcontainer_env_file+="\"--volume=\${localEnv:HOME}/.gnupg:\${localEnv:HOME}/.gnupg:ro\","
+    devcontainer_env_file+="\"--volume=/run/user/1000/gnupg:/run/user/1000/gnupg:ro\","
+
     # User provided Docker options
     if [ -n "${docker_opts}" ]; then
         devcontainer_env_file+="\"$docker_opts\","
@@ -1338,26 +1342,18 @@ vscode() {
     mkdir -p "${tmpdir}/.devcontainer"
     cp -arL "${dev_container_path}/devcontainer.json" "${tmpdir}/.devcontainer"
     sed -i -e "s|\${localWorkspaceFolder}|$(pwd)|g" "${tmpdir}/.devcontainer/devcontainer.json" \
-        -e "s|//\"<env>\"|$devcontainer_env_file|g" "${tmpdir}/.devcontainer/devcontainer.json"
+        -e "s|//\"<env>\"|$devcontainer_env_file|g" "${tmpdir}/.devcontainer/devcontainer.json" \
+        -e "s|\${localEnv:HOLOHUB_BASE_IMAGE}|${HOLOHUB_BASE_IMAGE}|g" "${tmpdir}/.devcontainer/devcontainer.json"
 
-    local hash="$(echo -n "${tmpdir}" | xxd -pu - | tr -d '[:space:]')"
-    local url="vscode://vscode-remote/dev-container+${hash}/workspace/holohub"
-
-    local launch=""
-    if type open >/dev/null 2>&1; then
-        launch="open"
-    elif type xdg-open >/dev/null 2>&1; then
-        launch="xdg-open"
-    fi
-
-    if [ -n "${launch}" ]; then
-        c_echo "Launching VSCode Dev Container from : ${tmpdir}"
-        code --new-window "$tmpdir"
-        c_echo "Connecting to ${url}..."
-        exec "${launch}" "${url}" >/dev/null 2>&1
+    # Support both VS Code and Cursor on Linux
+    if [ -z "$APPIMAGE" ]; then
+        APP=code
     else
-        fatal "Error launching VSCode Dev Container. Please ensure that $(open) or $(xdg-open) is installed."
+        APP=${APPIMAGE}
     fi
+    c_echo "Launching Dev Container from : ${tmpdir}"
+    p=$(printf "%s" "${tmpdir}" | xxd -p) \
+      && ${APP} --folder-uri "vscode-remote://dev-container+${p//[[:space:]]/}/workspace/holohub"
 }
 
 #===============================================================================
