@@ -30,36 +30,37 @@ resources:
 
 replayer:
   basename: "surgical_video"
-  frame_rate: 0   # as specified in timestamps
+  frame_rate: 120   # as specified in timestamps
   repeat: false    # default: false
-  realtime: false  # default: false
+  realtime: true  # default: false
   count: 0        # default: 0 (no frame count restriction)
 
 holoviz:
   window_title: "Cosmos Video Tokenize"
+  framerate: 120
   tensors:
-    - name: ""
+    - name: "image"
       type: color
-      opacity: 1.0
-      priority: 0
 
 preprocessor:
   out_tensor_name: source_video
   out_dtype: "float32"
-  scale_min: 0.0
-  scale_max: 255.0
+  scale_min: -1.0
+  scale_max: 1.0
+  resize_height: 480
+  resize_width: 848
 
 encoder:
-  backend: torch
-  model_file: encoder.pt
+  backend: trt
+  model_file: encoder.onnx
   pre_processor_map:
     "cosmos_encoder": ["source_video"]
   inference_map:
     "cosmos_encoder": ["inference_output"]
 
 decoder:
-  backend: torch
-  model_file: decoder.pt
+  backend: trt
+  model_file: decoder.onnx
   pre_processor_map:
     "cosmos_decoder": ["inference_output"]
   inference_map:

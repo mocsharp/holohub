@@ -15,8 +15,12 @@
 
 import os
 from argparse import ArgumentParser
+import cupy as cp
+import holoscan as hs
+import numpy as np
 
-from holoscan.core import Application, Operator, Tracker
+from holoscan.gxf import Entity
+from holoscan.core import Application, Operator, Tracker, OperatorSpec
 from holoscan.operators import InferenceOp, HolovizOp, VideoStreamReplayerOp, FormatConverterOp
 from holoscan.resources import (
     BlockMemoryPool,
@@ -25,6 +29,72 @@ from holoscan.resources import (
     RMMAllocator,
     UnboundedAllocator,
 )
+
+class FormatInferenceInputOp(Operator):
+    """Operator to format input image for inference"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def setup(self, spec: OperatorSpec):
+        spec.input("in")
+        spec.output("out")
+
+    def compute(self, op_input, op_output, context):
+        # Get input message
+        in_message = op_input.receive("in")
+
+        # Transpose
+        tensor = cp.asarray(in_message.get("source_video")).get()
+        # OBS: Numpy conversion and moveaxis is needed to avoid strange
+        # strides issue when doing inference
+        tensor = np.moveaxis(tensor, 2, 0)[None]
+        tensor = cp.asarray(tensor)
+
+        # Create output message
+        out_message = Entity(context)
+        out_message.add(hs.as_tensor(tensor), "source_video")
+        op_output.emit(out_message, "out")
+
+
+class PostprocessorOp(Operator):
+    """Operator that does postprocessing before sending resulting image to Holoviz"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def setup(self, spec: OperatorSpec):
+        """
+        input:  "input_image"     - Input tensor representing the RGB image
+        output: "output_image"    - The image for Holoviz to display
+
+        Returns:
+            None
+        """
+        spec.input("input_image")
+        spec.output("output_image")
+
+    def clamp(self, value, min_value=0, max_value=1):
+        """Clamp value between [min_value, max_value]"""
+        return max(min_value, min(max_value, value))
+
+    # Update size of holoviz framer buffer which will be used to calculate self.ratio
+    def framebuffer_size_callback(self, *args):
+        self.framebuffer_size = args[0]
+
+    def compute(self, op_input, op_output, context):
+        # Get input message
+        in_image = op_input.receive("input_image")
+        image = cp.asarray(in_image.get("inference_output_decoder"))
+        image = cp.transpose(image, (1, 2, 0))
+
+        # Tensor is in range [-1, 1], so we need to scale it to [0, 255]
+        image = (image - image.min()) / (image.max() - image.min())
+        image = (image * 255).astype(cp.uint8)
+
+        # Create output message
+        out_message = {"image": hs.as_tensor(image)}
+        op_output.emit(out_message, "output_image")
 
 class StatsOp(Operator):
     def __init__(self, app, *args, **kwargs):
@@ -96,15 +166,14 @@ class CosmosVideoTokenizeApp(Application):
         preprocessor = FormatConverterOp(
             self,
             name="preprocessor",
-            pool=BlockMemoryPool(
-                self,
-                name="pool",
-                storage_type=MemoryStorageType.DEVICE,
-                block_size=source_block_size,
-                num_blocks=source_num_blocks,
-            ),
+            pool=pool,
             **self.kwargs("preprocessor"),
         )
+        format_inference_input = FormatInferenceInputOp(
+            self,
+            name="format_inference_input",
+        )
+
 
         encoder_args = self.kwargs("encoder")
         encoder_args["model_path_map"] = {
@@ -126,33 +195,39 @@ class CosmosVideoTokenizeApp(Application):
         decoder_args["allocator"] = pool
         del decoder_args["model_file"]
 
-        # decoder = InferenceOp(
-        #     self,
-        #     name="inference_decoder",
-        #     **decoder_args,
-        # )
+        decoder = InferenceOp(
+            self,
+            name="inference_decoder",
+            **decoder_args,
+        )
 
-        # visualizer = HolovizOp(
-        #     self,
-        #     name="visualizer",
-        #     allocator=CudaStreamPool(
-        #         self,
-        #         name="cuda_stream",
-        #         dev_id=0,
-        #         stream_flags=0,
-        #         stream_priority=0,
-        #         reserved_size=1,
-        #         max_size=5,
-        #     ),
-        #     **self.kwargs("holoviz"),
-        # )
+        postprocessor = PostprocessorOp(self, name="postprocessor")
+
+
+        visualizer = HolovizOp(
+            self,
+            name="visualizer",
+            allocator=CudaStreamPool(
+                self,
+                name="cuda_stream",
+                dev_id=0,
+                stream_flags=0,
+                stream_priority=0,
+                reserved_size=1,
+                max_size=5,
+            ),
+            **self.kwargs("holoviz"),
+        )
 
         stats = StatsOp(self, name="stats")
         self.add_flow(source, preprocessor, {("output", "source_video")})
-        self.add_flow(preprocessor, encoder, {("tensor", "receivers")})
-        self.add_flow(encoder, stats, {("transmitter", "input")})
-        # self.add_flow(encoder, decoder, {("transmitter", "receivers")})
-        # self.add_flow(decoder, visualizer, {("transmitter", "receivers")})
+        self.add_flow(preprocessor, format_inference_input, {("tensor", "in")})
+        self.add_flow(format_inference_input, encoder, {("out", "receivers")})
+        self.add_flow(encoder, decoder, {("transmitter", "receivers")})
+        self.add_flow(decoder, postprocessor, {("transmitter", "input_image")})
+        self.add_flow(postprocessor, visualizer, {("output_image", "receivers")})
+        # self.add_flow(encoder, stats, {("transmitter", "input")})
+
 
 
 if __name__ == "__main__":

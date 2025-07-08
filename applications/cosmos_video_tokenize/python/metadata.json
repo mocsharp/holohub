@@ -1,12 +1,13 @@
 {
 	"application": {
-		"name": "NVIDIA Video Codec",
+		"name": "Cosmos Video Tokenize",
 		"authors": [
 			{
 				"name": "Holoscan Team",
 				"affiliation": "NVIDIA"
 			}
 		],
+		"dockerfile": "applications/cosmos_video_tokenize/Dockerfile",
 		"language": "Python",
 		"version": "1.0",
 		"changelog": {
@@ -37,12 +38,6 @@
 					"description": "This resource contains the convolutional LSTM model for tool tracking in laparoscopic videos by Nwoye et. al [1], and a sample surgical video.",
 					"url": "https://catalog.ngc.nvidia.com/orgs/nvidia/teams/clara-holoscan/resources/holoscan_endoscopy_sample_data",
 					"version": "20230222"
-				},
-				{
-					"name": "NVIDIA Video Codec SDK",
-					"description": "NVIDIA Video Codec SDK",
-					"url": "https://developer.nvidia.com/video-codec-sdk",
-					"version": "13.0"
 				}
 			]
 		},
