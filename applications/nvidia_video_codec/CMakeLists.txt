@@ -41,3 +41,11 @@ add_holohub_application(nvc_encode_decode DEPENDS OPERATORS
 add_holohub_application(nvc_encode_writer DEPENDS OPERATORS
                           nv_video_encoder
                           tensor_to_file)
+add_holohub_application(nvc_endoscopy_tool_tracking DEPENDS OPERATORS
+                          nv_video_reader
+                          nv_video_encoder
+                          nv_video_decoder
+                          tensor_to_file
+                          tensor_to_video_buffer
+                          lstm_tensor_rt_inference
+                          tool_tracking_postprocessor)
